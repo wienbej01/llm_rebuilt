@@ -10,6 +10,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional, Dict, Any, Union
 from uuid import UUID, uuid4
+import json
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
@@ -79,11 +80,7 @@ class Bar(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     timestamp: datetime = Field(..., description="Bar timestamp in UTC")
@@ -93,31 +90,14 @@ class Bar(BaseModel):
     close: Decimal = Field(..., ge=0, description="Close price")
     volume: int = Field(..., ge=0, description="Volume")
     
-    @field_validator('high')
-    @classmethod
-    def validate_high(cls, v: Decimal, values: Dict[str, Any]) -> Decimal:
-        """Ensure high is the maximum price."""
-        if 'low' in values and 'open' in values and 'close' in values:
-            low = values['low']
-            open_price = values['open']
-            close = values['close']
-            max_price = max(open_price, close, low)
-            if v < max_price:
-                raise ValueError(f"High must be >= max(open, close, low), got {v} < {max_price}")
-        return v
-    
-    @field_validator('low')
-    @classmethod
-    def validate_low(cls, v: Decimal, values: Dict[str, Any]) -> Decimal:
-        """Ensure low is the minimum price."""
-        if 'high' in values and 'open' in values and 'close' in values:
-            high = values['high']
-            open_price = values['open']
-            close = values['close']
-            min_price = min(open_price, close, high)
-            if v > min_price:
-                raise ValueError(f"Low must be <= min(open, close, high), got {v} > {min_price}")
-        return v
+    @model_validator(mode='after')
+    def validate_prices(self) -> 'Bar':
+        """Ensure price relationships are valid."""
+        if self.high < max(self.open, self.close, self.low):
+            raise ValueError(f"High must be >= max(open, close, low), got {self.high} < {max(self.open, self.close, self.low)}")
+        if self.low > min(self.open, self.close, self.high):
+            raise ValueError(f"Low must be <= min(open, close, high), got {self.low} > {min(self.open, self.close, self.high)}")
+        return self
 
 
 class SwingPoint(BaseModel):
@@ -126,11 +106,7 @@ class SwingPoint(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     bar_index: int = Field(..., ge=0, description="Index of the bar in the sequence")
@@ -138,14 +114,6 @@ class SwingPoint(BaseModel):
     price: Decimal = Field(..., gt=0, description="Price level of the swing")
     swing_type: SwingType = Field(..., description="Type of swing point")
     strength: int = Field(..., ge=1, le=10, description="Swing strength (1-10)")
-    
-    @field_validator('strength')
-    @classmethod
-    def validate_strength(cls, v: int) -> int:
-        """Ensure strength is within valid range."""
-        if not 1 <= v <= 10:
-            raise ValueError(f"Strength must be between 1 and 10, got {v}")
-        return v
 
 
 class MSS(BaseModel):
@@ -154,11 +122,7 @@ class MSS(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     start_bar: int = Field(..., ge=0, description="Starting bar index")
@@ -182,11 +146,7 @@ class FVG(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     start_bar: int = Field(..., ge=0, description="Starting bar index")
@@ -218,11 +178,7 @@ class TCC(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     start_time: datetime = Field(..., description="Cycle start time")
@@ -245,11 +201,7 @@ class MCS(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     timeframe: str = Field(..., description="Higher timeframe")
@@ -265,11 +217,7 @@ class SetupProposal(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
@@ -308,14 +256,6 @@ class SetupProposal(BaseModel):
             if self.take_profit >= self.entry_price:
                 raise ValueError(f"For SELL, take_profit ({self.take_profit}) must be < entry_price ({self.entry_price})")
         return self
-    
-    @field_validator('confidence')
-    @classmethod
-    def validate_confidence(cls, v: Decimal) -> Decimal:
-        """Ensure confidence is within valid range."""
-        if not 0 <= v <= 1:
-            raise ValueError(f"Confidence must be between 0 and 1, got {v}")
-        return v
 
 
 class OrderIntent(BaseModel):
@@ -324,11 +264,7 @@ class OrderIntent(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
@@ -350,11 +286,7 @@ class ExecutionReport(BaseModel):
         frozen=True,
         extra="forbid",
         validate_assignment=True,
-        use_enum_values=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat(),
-            Decimal: lambda v: str(v)
-        }
+        use_enum_values=True
     )
     
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
@@ -377,9 +309,18 @@ class ExecutionReport(BaseModel):
 
 
 # Utility functions for deterministic serialization
+def decimal_serializer(obj):
+    """Custom serializer for Decimal objects."""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
 def serialize_to_json(obj: BaseModel) -> str:
     """Serialize model to JSON with deterministic ordering."""
-    return obj.model_dump_json(exclude_none=True, indent=None, sort_keys=True)
+    # Convert to dict first, then to JSON with sorted keys
+    data = obj.model_dump(exclude_none=True)
+    return json.dumps(data, sort_keys=True, separators=(',', ':'), default=decimal_serializer)
 
 
 def deserialize_from_json(json_str: str, model_type: type[BaseModel]) -> BaseModel:
