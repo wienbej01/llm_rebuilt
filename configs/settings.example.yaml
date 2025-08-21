@@ -1,0 +1,129 @@
+# Python Strategy Engine Configuration
+# Copy this file to settings.yaml and customize for your environment
+
+# Trading Parameters
+trading:
+  symbols:
+    - symbol: "ES"
+      description: "E-mini S&P 500 Futures"
+      exchange: "GLOBEX"
+      tick_size: 0.25
+      point_value: 50.0
+    - symbol: "NQ"
+      description: "E-mini NASDAQ 100 Futures"
+      exchange: "GLOBEX"
+      tick_size: 0.25
+      point_value: 20.0
+    - symbol: "RTY"
+      description: "E-mini Russell 2000 Futures"
+      exchange: "GLOBEX"
+      tick_size: 0.1
+      point_value: 50.0
+
+  timeframes:
+    primary: "1m"
+    secondary: "5m"
+    higher: "15m"
+    daily: "1d"
+
+# Detector Parameters for 5 Tactics
+detectors:
+  # Tactic 1: Break & Retest
+  break_retest:
+    swing_lookback: 20
+    min_bars_between: 5
+    max_bars_between: 50
+    retest_tolerance: 0.002  # 0.2% tolerance
+    min_volume_ratio: 1.5
+    
+  # Tactic 2: Order Block
+  order_block:
+    imbalance_threshold: 3.0
+    fvg_min_size: 0.001
+    ob_retouch_tolerance: 0.001
+    volume_confirmation: true
+    
+  # Tactic 3: Fair Value Gap
+  fvg:
+    min_gap_size: 0.001
+    fill_threshold: 0.8
+    max_age_bars: 100
+    volume_filter: true
+    
+  # Tactic 4: Liquidity Sweep
+  liquidity_sweep:
+    swing_lookback: 15
+    sweep_tolerance: 0.002
+    volume_spike_threshold: 2.0
+    reversal_confirmation: true
+    
+  # Tactic 5: Change of Character
+  change_of_character:
+    swing_lookback: 10
+    choch_threshold: 0.003
+    volume_confirmation: true
+    structure_break: true
+
+# Risk Policy
+risk:
+  max_r_per_trade: 0.01      # 1% max risk per trade
+  max_daily_loss: 0.03       # 3% max daily loss
+  max_weekly_loss: 0.05      # 5% max weekly loss
+  max_drawdown: 0.10         # 10% max drawdown
+  sl_caps:
+    es: 8.0                  # 8 points max SL for ES
+    nq: 20.0                 # 20 points max SL for NQ
+    rty: 6.0                 # 6 points max SL for RTY
+  position_sizing:
+    method: "fixed_risk"       # fixed_risk, kelly, or volatility_based
+    account_risk_pct: 0.01   # 1% account risk per trade
+    min_r_multiplier: 1.5    # Minimum R:R ratio
+
+# LLM Configuration
+llm:
+  provider: "openai"
+  model: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 1000
+  timeout: 30.0
+  retry_attempts: 3
+  system_prompt: |
+    You are a quantitative trading assistant. Analyze market structure and provide 
+    high-probability trade setups based on Smart Money Concepts (SMC).
+
+# IBKR Connection Settings
+ibkr:
+  host: "127.0.0.1"
+  port: 7497
+  client_id: 1
+  account: "DU123456"  # Replace with your account ID
+  data_farm: true
+  market_data_type: 1  # 1=Live, 2=Frozen, 3=Delayed, 4=Delayed Frozen
+  order_type: "MKT"
+  time_in_force: "DAY"
+  outside_rth: false
+
+# Session Configuration
+session:
+  rth_start: "09:30"
+  rth_end: "16:00"
+  eth_start: "18:00"
+  eth_end: "09:30"
+  timezone: "America/New_York"
+  trading_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/pse.log"
+  max_size: "10MB"
+  backup_count: 5
+
+# Cache Configuration
+cache:
+  enabled: true
+  ttl: 3600  # 1 hour
+  max_size: "100MB"
+  backend: "redis"  # redis or memory
+  redis_url: "redis://localhost:6379/0"
