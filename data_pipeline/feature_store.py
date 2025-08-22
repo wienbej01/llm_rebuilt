@@ -134,9 +134,6 @@ class FeatureStore:
         # Convert bars to DataFrame
         df = self._bars_to_dataframe(bars)
 
-        # Add metadata columns
-        df['symbol'] = symbol
-        df['timeframe'] = timeframe
         df['version'] = version
 
         # Store as Parquet
@@ -198,11 +195,15 @@ class FeatureStore:
         bars = []
         for _, row in combined_df.iterrows():
             bar = Bar(
+                symbol=row['symbol'],
+                timeframe=row['timeframe'],
                 timestamp=row['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc),
-                open=float(row['open']),
-                high=float(row['high']),
-                low=float(row['low']),
-                close=float(row['close']),
+                session=row['session'],
+                venue=row.get('venue'),
+                open=row['open'],
+                high=row['high'],
+                low=row['low'],
+                close=row['close'],
                 volume=int(row['volume'])
             )
             bars.append(bar)
@@ -311,15 +312,22 @@ class FeatureStore:
 
     def _bars_to_dataframe(self, bars: List[Bar]) -> pd.DataFrame:
         """Convert bars to DataFrame."""
+        if not bars:
+            return pd.DataFrame()
         data = {
+            'symbol': [bar.symbol for bar in bars],
+            'timeframe': [bar.timeframe for bar in bars],
             'timestamp': [bar.timestamp for bar in bars],
+            'session': [bar.session for bar in bars],
+            'venue': [bar.venue for bar in bars],
             'open': [bar.open for bar in bars],
             'high': [bar.high for bar in bars],
             'low': [bar.low for bar in bars],
             'close': [bar.close for bar in bars],
             'volume': [bar.volume for bar in bars]
         }
-        return pd.DataFrame(data)
+        df = pd.DataFrame(data)
+        return df
 
     def _generate_version(self, bars: List[Bar]) -> str:
         """Generate version string based on bar data."""
