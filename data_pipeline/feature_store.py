@@ -5,7 +5,6 @@ Handles data persistence, versioning, and efficient querying.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
@@ -13,6 +12,7 @@ import json
 import hashlib
 import logging
 import shutil
+from asyncio import to_thread
 
 import pandas as pd
 import pyarrow as pa
@@ -355,7 +355,7 @@ class FeatureStore:
                 row_group_size=self.config.row_group_size
             )
 
-        await asyncio.get_event_loop().run_in_executor(None, _write_parquet)
+        await to_thread(_write_parquet)
 
     async def _load_parquet(self, file_path: Path) -> Optional[pd.DataFrame]:
         """Load DataFrame from Parquet file."""
@@ -365,7 +365,7 @@ class FeatureStore:
         def _read_parquet():
             return pq.read_table(file_path).to_pandas()
 
-        return await asyncio.get_event_loop().run_in_executor(None, _read_parquet)
+        return await to_thread(_read_parquet)
 
     async def _store_version_metadata(
         self,
@@ -423,7 +423,7 @@ class FeatureStore:
             with open(file_path, 'w') as f:
                 json.dump(data, f, indent=2, default=str)
 
-        await asyncio.get_event_loop().run_in_executor(None, _write)
+        await to_thread(_write)
 
     async def _find_data_files(
         self,
@@ -514,7 +514,7 @@ class FeatureStore:
                 VALUES (?, ?, ?, ?, ?, ?)
             """, [symbol, timeframe, date_val, str(file_path), version, datetime.now(timezone.utc)])
 
-        await asyncio.get_event_loop().run_in_executor(None, _update)
+        await to_thread(_update)
 
     async def cleanup_old_versions(self, max_versions: Optional[int] = None) -> None:
         """Clean up old versions to save space."""
