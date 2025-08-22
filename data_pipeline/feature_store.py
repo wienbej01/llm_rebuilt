@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, date, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 import json
@@ -199,10 +200,10 @@ class FeatureStore:
         for _, row in combined_df.iterrows():
             bar = Bar(
                 timestamp=row['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc),
-                open=float(row['open']),
-                high=float(row['high']),
-                low=float(row['low']),
-                close=float(row['close']),
+                open=Decimal(str(row['open'])),
+                high=Decimal(str(row['high'])),
+                low=Decimal(str(row['low'])),
+                close=Decimal(str(row['close'])),
                 volume=int(row['volume'])
             )
             bars.append(bar)

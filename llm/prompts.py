@@ -4,11 +4,19 @@ Prompt pack for different LLM tasks and roles.
 """
 
 from __future__ import annotations
-
-from typing import Dict, Any
+from decimal import Decimal
+from typing import Dict, Any, Any
 import json
 
 from llm.schemas import LLMTask, MarketContext, RiskPolicy
+
+
+def _prompt_json_encoder(obj: Any) -> Any:
+    """Custom JSON encoder for prompt context to handle Decimals."""
+    if isinstance(obj, Decimal):
+        # Use string representation to avoid precision loss and scientific notation.
+        return str(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 class PromptPack:
@@ -140,7 +148,7 @@ class PromptBuilder:
             "setups": [self._serialize_setup(setup) for setup in setups]
         }
 
-        return f"{system_prompt}\n\n{task_prompt}\n\nCONTEXT:\n{json.dumps(context, indent=2)}"
+        return f"{system_prompt}\n\n{task_prompt}\n\nCONTEXT:\n{json.dumps(context, indent=2, default=_prompt_json_encoder)}"
 
     def build_holistic_proposer_prompt(
         self,
@@ -181,7 +189,7 @@ class PromptBuilder:
             "observed_features": observed_features
         }
 
-        return f"{system_prompt}\n\n{task_prompt}\n\nCONTEXT:\n{json.dumps(context, indent=2)}"
+        return f"{system_prompt}\n\n{task_prompt}\n\nCONTEXT:\n{json.dumps(context, indent=2, default=_prompt_json_encoder)}"
 
     def build_risk_officer_prompt(
         self,
@@ -227,7 +235,7 @@ class PromptBuilder:
             "context": context
         }
 
-        return f"{system_prompt}\n\n{task_prompt}\n\nINPUT:\n{json.dumps(context_data, indent=2)}"
+        return f"{system_prompt}\n\n{task_prompt}\n\nINPUT:\n{json.dumps(context_data, indent=2, default=_prompt_json_encoder)}"
 
     def _serialize_setup(self, setup) -> Dict[str, Any]:
         """
@@ -244,11 +252,11 @@ class PromptBuilder:
             "symbol": setup.symbol,
             "setup_type": setup.setup_type.value,
             "side": setup.side.value,
-            "entry_price": float(setup.entry_price),
-            "stop_loss": float(setup.stop_loss),
-            "take_profit": float(setup.take_profit),
-            "risk_reward_ratio": float(setup.risk_reward_ratio),
-            "confidence": float(setup.confidence),
+            "entry_price": setup.entry_price,
+            "stop_loss": setup.stop_loss,
+            "take_profit": setup.take_profit,
+            "risk_reward_ratio": setup.risk_reward_ratio,
+            "confidence": setup.confidence,
             "evidence": getattr(setup, 'evidence', {})
         }
 

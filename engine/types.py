@@ -312,7 +312,7 @@ class ExecutionReport(BaseModel):
 def decimal_serializer(obj):
     """Custom serializer for Decimal objects."""
     if isinstance(obj, Decimal):
-        return float(obj)
+        return str(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 

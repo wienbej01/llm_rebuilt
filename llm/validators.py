@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import Dict, Any, List, Optional, Union
 import logging
 import re
@@ -353,14 +352,10 @@ class LLMValidator:
             if len(validation.reason) > 120:
                 raise ValueError("validation reason must be ≤120 characters")
 
-            # Validate numeric constraints in edits
-            if validation.edits:
-                if validation.edits.entry is not None and validation.edits.entry <= Decimal("0"):
-                    raise ValueError("validation edit entry must be positive")
-                if validation.edits.sl is not None and validation.edits.sl <= Decimal("0"):
-                    raise ValueError("validation edit sl must be positive")
-                if validation.edits.tp1 is not None and validation.edits.tp1 <= Decimal("0"):
-                    raise ValueError("validation edit tp1 must be positive")
+            # Validate scale factor in edits
+            if validation.edits and hasattr(validation.edits, 'scale'):
+                if validation.edits.scale and not (0 <= validation.edits.scale <= 1):
+                    raise ValueError("validation edit scale must be between 0 and 1")
 
         # Validate risk decisions
         for decision in llm_output.risk_decisions:
@@ -375,14 +370,14 @@ class LLMValidator:
         for order in orders:
             if order.quantity <= 0:
                 raise ValueError("order quantity must be positive")
- 
-            if order.entry_price <= Decimal("0"):
+
+            if order.entry_price <= 0:
                 raise ValueError("order entry price must be positive")
- 
-            if order.stop_loss <= Decimal("0"):
+
+            if order.stop_loss <= 0:
                 raise ValueError("order stop loss must be positive")
- 
-            if order.estimated_risk < Decimal("0"):
+
+            if order.estimated_risk < 0:
                 raise ValueError("order estimated risk must be non-negative")
 
     def _validate_feature_constraints(self, features: ObservedFeatures) -> None:
