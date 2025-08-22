@@ -118,7 +118,8 @@ class StrategyEngine:
     def process_5m_bar_with_1m_context(
         self,
         bar_5m: Bar,
-        bars_1m_window: List[Bar]
+        bars_1m_window: List[Bar],
+        symbol_info: Dict[str, Any]
     ) -> List[SetupProposal]:
         """
         Process a 5-minute bar with 1-minute context and return setup proposals.
@@ -126,6 +127,7 @@ class StrategyEngine:
         Args:
             bar_5m: 5-minute bar to process
             bars_1m_window: 1-minute bars for context
+            symbol_info: Symbol information for risk assessment
 
         Returns:
             List of setup proposals
@@ -160,7 +162,7 @@ class StrategyEngine:
             )
 
             # Run detectors
-            setups = self._run_detectors(bars_1m_window)
+            setups = self._run_detectors(bars_1m_window, symbol_info)
 
             # Run post-detection hooks
             self._run_hooks("post_detection", setups)
@@ -219,7 +221,7 @@ class StrategyEngine:
         if len(self.market_state.fvgs) > self.config.max_fvgs:
             self.market_state.fvgs = self.market_state.fvgs[-self.config.max_fvgs:]
 
-    def _run_detectors(self, bars_1m_window: List[Bar]) -> List[SetupProposal]:
+    def _run_detectors(self, bars_1m_window: List[Bar], symbol_info: Dict[str, Any]) -> List[SetupProposal]:
         """Run enabled detectors and return setup proposals."""
         setups = []
 
@@ -233,22 +235,14 @@ class StrategyEngine:
         # Assess risk for each setup
         risk_assessed_setups = []
         for setup in setups:
-            # Get symbol info (simplified)
-            symbol_info = {
-                "tick_size": 0.25,
-                "point_value": 50.0,
-                "estimated_spread": 0.25,
-                "avg_price": 5000.0
-            }
-
             risk_assessment = self.risk_kernel.assess_risk_for_setup(
                 setup, self.market_state, symbol_info
             )
 
             if risk_assessment["is_viable"]:
-                # Update setup with risk assessment
-                setup.risk_assessment = risk_assessment
-                risk_assessed_setups.append(setup)
+                # Recreate setup with risk assessment due to frozen model
+                new_setup = setup.model_copy(update={'risk_assessment': risk_assessment})
+                risk_assessed_setups.append(new_setup)
 
         return risk_assessed_setups
 
@@ -346,7 +340,8 @@ class StrategyEngine:
     def process_historical_bars(
         self,
         bars_5m: List[Bar],
-        bars_1m: List[Bar]
+        bars_1m: List[Bar],
+        symbol_info: Dict[str, Any]
     ) -> List[SetupProposal]:
         """
         Process historical bars and return all setup proposals.
@@ -354,6 +349,7 @@ class StrategyEngine:
         Args:
             bars_5m: List of 5-minute bars
             bars_1m: List of 1-minute bars
+            symbol_info: Symbol information for risk assessment
 
         Returns:
             List of all setup proposals
@@ -369,7 +365,7 @@ class StrategyEngine:
             bars_1m_context = bars_1m[context_start:context_end]
 
             # Process bar
-            setups = self.process_5m_bar_with_1m_context(bar_5m, bars_1m_context)
+            setups = self.process_5m_bar_with_1m_context(bar_5m, bars_1m_context, symbol_info)
             all_setups.extend(setups)
 
             if i % 100 == 0:
