@@ -111,25 +111,7 @@ def detect_das22_setups(
             sl_price = _calculate_sl_price(fvg, direction)
             tp1_price = _calculate_tp1_price(entry_price, sl_price, direction)
 
-            # Create setup proposal
-            setup = SetupProposal(
-                symbol="ES",  # This should be configurable
-                setup_type=SetupType.LIQUIDITY_SWEEP,
-                side=direction,
-                entry_price=entry_price,
-                stop_loss=sl_price,
-                take_profit=tp1_price,
-                risk_reward_ratio=_calculate_risk_reward(entry_price, sl_price, tp1_price),
-                confidence=_calculate_confidence(fvg_quality, len(relevant_swings), sweep["strength"]),
-                swing_points=relevant_swings,
-                mss_list=[reversal_mss],
-                fvgs=[fvg],
-                volume_analysis={"fvg_volume_ratio": _calculate_fvg_volume_ratio(fvg, market_state)},
-                order_flow={"retest_strength": retest_info["strength"]}
-            )
-
-            # Add evidence fields with sweep metadata
-            setup.evidence = {
+            evidence = {
                 "tactic": "DAS 2.2",
                 "mqs": fvg_quality,
                 "frs": fvg_quality,
@@ -145,6 +127,23 @@ def detect_das22_setups(
                     "sweep_bar": sweep["bar_index"]
                 }
             }
+
+            setup = SetupProposal(
+                symbol="ES",  # This should be configurable
+                setup_type=SetupType.LIQUIDITY_SWEEP,
+                side=direction,
+                entry_price=entry_price,
+                stop_loss=sl_price,
+                take_profit=tp1_price,
+                risk_reward_ratio=_calculate_risk_reward(entry_price, sl_price, tp1_price),
+                confidence=_calculate_confidence(fvg_quality, len(relevant_swings), sweep["strength"]),
+                swing_points=relevant_swings,
+                mss_list=[reversal_mss],
+                fvgs=[fvg],
+                volume_analysis={"fvg_volume_ratio": _calculate_fvg_volume_ratio(fvg, market_state)},
+                order_flow={"retest_strength": retest_info["strength"]},
+                evidence=evidence
+            )
 
             setups.append(setup)
 

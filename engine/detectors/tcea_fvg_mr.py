@@ -103,7 +103,18 @@ def detect_tcea_fvg_mr_setups(
         # Calculate sizing multiplier based on reaction strength
         sizing_multiplier = _calculate_sizing_multiplier(reaction_info["strength"])
 
-        # Create setup proposal
+        evidence = {
+            "tactic": "TCEA-FVG-MR",
+            "mqs": min_mqs,  # Placeholder
+            "frs": min_frs,  # Placeholder
+            "fvg_width": (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / 2),
+            "fvg_staleness": _calculate_fvg_staleness(fvg, market_state),
+            "reaction_strength": reaction_info["strength"],
+            "reaction_distance": reaction_info["distance"],
+            "pullback_depth": pullback_info["depth"],
+            "sizing_multiplier": sizing_multiplier
+        }
+
         setup = SetupProposal(
             symbol="ES",  # This should be configurable
             setup_type=SetupType.FVG,
@@ -117,21 +128,9 @@ def detect_tcea_fvg_mr_setups(
             mss_list=pullback_info["mss_list"],
             fvgs=[fvg],
             volume_analysis={"reaction_volume_ratio": reaction_info["volume_ratio"]},
-            order_flow={"pullback_strength": pullback_info["strength"]}
+            order_flow={"pullback_strength": pullback_info["strength"]},
+            evidence=evidence
         )
-
-        # Add evidence fields
-        setup.evidence = {
-            "tactic": "TCEA-FVG-MR",
-            "mqs": min_mqs,  # Placeholder
-            "frs": min_frs,  # Placeholder
-            "fvg_width": (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / 2),
-            "fvg_staleness": _calculate_fvg_staleness(fvg, market_state),
-            "reaction_strength": reaction_info["strength"],
-            "reaction_distance": reaction_info["distance"],
-            "pullback_depth": pullback_info["depth"],
-            "sizing_multiplier": sizing_multiplier
-        }
 
         setups.append(setup)
 

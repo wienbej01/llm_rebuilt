@@ -249,7 +249,7 @@ class PromptBuilder:
             "take_profit": float(setup.take_profit),
             "risk_reward_ratio": float(setup.risk_reward_ratio),
             "confidence": float(setup.confidence),
-            "evidence": getattr(setup, 'evidence', {})
+            "evidence": setup.evidence or {}
         }
 
 

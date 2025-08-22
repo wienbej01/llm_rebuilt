@@ -246,8 +246,8 @@ class StrategyEngine:
             )
 
             if risk_assessment["is_viable"]:
-                # Update setup with risk assessment
-                setup.risk_assessment = risk_assessment
+                # Create a new setup object with risk assessment data
+                setup = setup.model_copy(update={"risk_assessment": risk_assessment})
                 risk_assessed_setups.append(setup)
 
         return risk_assessed_setups
