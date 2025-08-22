@@ -446,7 +446,8 @@ class StrategyEngine:
         filtered_setups = []
 
         for setup in setups:
-            risk_score = getattr(setup, 'risk_assessment', {}).get('risk_score', 10.0)
+            risk_assessment = setup.risk_assessment or {}
+            risk_score = risk_assessment.get('risk_score', 10.0)
             if risk_score <= max_risk_score:
                 filtered_setups.append(setup)
 

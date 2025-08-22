@@ -105,18 +105,7 @@ def detect_mte_setups(
         # Get relevant swings
         relevant_swings = _get_relevant_swings(recent_swings, mss, min_swing_strength)
 
-        evidence = {
-            "tactic": "TCEA-MTE",
-            "mqs": mss_quality,
-            "frs": mss_quality,
-            "tcc_strength": tcc_strength,
-            "thrust_strength": thrust_info["strength"],
-            "thrust_direction": thrust_info["direction"],
-            "breakout_level": thrust_info["breakout_level"],
-            "thrust_volume_ratio": thrust_info["volume_ratio"],
-            "entry_timing": thrust_info["entry_timing"]
-        }
-
+        # Create setup proposal
         setup = SetupProposal(
             symbol="ES",  # This should be configurable
             setup_type=SetupType.CHANGE_OF_CHARACTER,
@@ -130,9 +119,21 @@ def detect_mte_setups(
             mss_list=[mss],
             fvgs=[],  # MTE typically doesn't rely on FVGs
             volume_analysis={"thrust_volume_ratio": thrust_info["volume_ratio"]},
-            order_flow={"thrust_strength": thrust_info["strength"]},
-            evidence=evidence
+            order_flow={"thrust_strength": thrust_info["strength"]}
         )
+
+        # Add evidence fields
+        setup.evidence = {
+            "tactic": "TCEA-MTE",
+            "mqs": mss_quality,
+            "frs": mss_quality,
+            "tcc_strength": tcc_strength,
+            "thrust_strength": thrust_info["strength"],
+            "thrust_direction": thrust_info["direction"],
+            "breakout_level": thrust_info["breakout_level"],
+            "thrust_volume_ratio": thrust_info["volume_ratio"],
+            "entry_timing": thrust_info["entry_timing"]
+        }
 
         setups.append(setup)
 

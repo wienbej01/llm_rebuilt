@@ -102,16 +102,7 @@ def detect_das21_setups(
             sl_price = _calculate_sl_price(fvg, direction)
             tp1_price = _calculate_tp1_price(entry_price, sl_price, direction)
 
-            evidence = {
-                "tactic": "DAS 2.1",
-                "mqs": fvg_quality,
-                "frs": fvg_quality,
-                "fvg_width": (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / 2),
-                "fvg_staleness": _calculate_fvg_staleness(fvg, market_state),
-                "retest_distance": abs(entry_price - ((fvg.top + fvg.bottom) / 2)),
-                "swing_strength": np.mean([s.strength for s in relevant_swings]) if relevant_swings else 0
-            }
-
+            # Create setup proposal
             setup = SetupProposal(
                 symbol="ES",  # This should be configurable
                 setup_type=SetupType.FVG,
@@ -125,9 +116,19 @@ def detect_das21_setups(
                 mss_list=[mss],
                 fvgs=[fvg],
                 volume_analysis={"fvg_volume_ratio": _calculate_fvg_volume_ratio(fvg, market_state)},
-                order_flow={"retest_strength": retest_info["strength"]},
-                evidence=evidence
+                order_flow={"retest_strength": retest_info["strength"]}
             )
+
+            # Add evidence fields
+            setup.evidence = {
+                "tactic": "DAS 2.1",
+                "mqs": fvg_quality,
+                "frs": fvg_quality,
+                "fvg_width": (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / 2),
+                "fvg_staleness": _calculate_fvg_staleness(fvg, market_state),
+                "retest_distance": abs(entry_price - ((fvg.top + fvg.bottom) / 2)),
+                "swing_strength": np.mean([s.strength for s in relevant_swings]) if relevant_swings else 0
+            }
 
             setups.append(setup)
 

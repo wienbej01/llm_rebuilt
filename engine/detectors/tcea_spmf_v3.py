@@ -110,18 +110,7 @@ def detect_tcea_spmf_v3_setups(
     # Get relevant swings
     relevant_swings = _get_relevant_swings(recent_swings, impulse_pullback_info, min_swing_strength)
 
-    evidence = {
-        "tactic": "TCEA-SPMF v3",
-        "mqs": min_mqs,  # Placeholder
-        "frs": min_frs,  # Placeholder
-        "tcc_strength": tcc_strength,
-        "impulse_strength": impulse_pullback_info["impulse_strength"],
-        "pullback_depth": impulse_pullback_info["retracement_pct"],
-        "pullback_quality": impulse_pullback_info["quality"],
-        "micro_fvg_count": len(micro_fvgs),
-        "breakout_strength": breakout_info["strength"]
-    }
-
+    # Create setup proposal
     setup = SetupProposal(
         symbol="ES",  # This should be configurable
         setup_type=SetupType.FVG,
@@ -135,9 +124,21 @@ def detect_tcea_spmf_v3_setups(
         mss_list=impulse_pullback_info["mss_list"],
         fvgs=micro_fvgs,
         volume_analysis={"impulse_volume_ratio": impulse_pullback_info["volume_ratio"]},
-        order_flow={"breakout_strength": breakout_info["strength"]},
-        evidence=evidence
+        order_flow={"breakout_strength": breakout_info["strength"]}
     )
+
+    # Add evidence fields
+    setup.evidence = {
+        "tactic": "TCEA-SPMF v3",
+        "mqs": min_mqs,  # Placeholder
+        "frs": min_frs,  # Placeholder
+        "tcc_strength": tcc_strength,
+        "impulse_strength": impulse_pullback_info["impulse_strength"],
+        "pullback_depth": impulse_pullback_info["retracement_pct"],
+        "pullback_quality": impulse_pullback_info["quality"],
+        "micro_fvg_count": len(micro_fvgs),
+        "breakout_strength": breakout_info["strength"]
+    }
 
     setups.append(setup)
 
