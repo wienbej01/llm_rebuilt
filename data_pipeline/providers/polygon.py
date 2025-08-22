@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, date, timezone
-from decimal import Decimal
 from typing import List, Dict, Any, Optional
 import json
 import logging
 
 from .base import HistoricalDataProvider, ConnectionError, AuthenticationError, DataNotAvailableError, RateLimitError
-from engine.types import Bar, SessionType
+from engine.types import Bar
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +95,9 @@ class PolygonProvider(HistoricalDataProvider):
 
         self.update_last_request_time()
 
-        # Get session, default to ETH for Polygon as it provides full session data
-        session_str = kwargs.get('session', 'ETH').upper()
-        session = SessionType(session_str)
-
         try:
             # Convert symbol to Polygon format if needed
-            polygon_symbol, venue = self._convert_symbol(symbol)
+            polygon_symbol = self._convert_symbol(symbol)
 
             # Convert timeframe to Polygon format
             multiplier, timespan = self._convert_timeframe(timeframe)
@@ -135,7 +130,7 @@ class PolygonProvider(HistoricalDataProvider):
             bars = []
             if "results" in data:
                 for record in data["results"]:
-                    bar = self._parse_polygon_record(record, symbol, timeframe, session, venue)
+                    bar = self._parse_polygon_record(record, symbol)
                     if bar:
                         bars.append(bar)
 
@@ -146,18 +141,18 @@ class PolygonProvider(HistoricalDataProvider):
             logger.error(f"Error retrieving data from Polygon: {str(e)}")
             raise DataNotAvailableError(f"Failed to retrieve data: {str(e)}")
 
-    def _convert_symbol(self, symbol: str) -> tuple[str, str]:
-        """Convert internal symbol format to Polygon format and get venue."""
+    def _convert_symbol(self, symbol: str) -> str:
+        """Convert internal symbol format to Polygon format."""
         # Polygon uses different symbol formats for different asset classes
         symbol_mappings = {
-            "ES": ("ES", "CME"),  # E-mini S&P 500 futures
-            "NQ": ("NQ", "CME"),  # E-mini NASDAQ 100 futures
-            "RTY": ("RTY", "CME"),  # E-mini Russell 2000 futures
-            "GC": ("GC", "COMEX"),  # Gold futures
-            "SI": ("SI", "COMEX"),  # Silver futures
-            "CL": ("CL", "NYMEX"),  # Crude Oil futures
+            "ES": "ES",  # E-mini S&P 500 futures
+            "NQ": "NQ",  # E-mini NASDAQ 100 futures
+            "RTY": "RTY",  # E-mini Russell 2000 futures
+            "GC": "GC",  # Gold futures
+            "SI": "SI",  # Silver futures
+            "CL": "CL",  # Crude Oil futures
         }
-        return symbol_mappings.get(symbol, (symbol, "SMART"))
+        return symbol_mappings.get(symbol, symbol)
 
     def _convert_timeframe(self, timeframe: str) -> tuple[int, str]:
         """Convert internal timeframe format to Polygon format."""
@@ -170,7 +165,7 @@ class PolygonProvider(HistoricalDataProvider):
         }
         return conversion_map.get(timeframe, (1, "minute"))
 
-    def _parse_polygon_record(self, record: Dict[str, Any], symbol: str, timeframe: str, session: SessionType, venue: str) -> Optional[Bar]:
+    def _parse_polygon_record(self, record: Dict[str, Any], symbol: str) -> Optional[Bar]:
         """Parse a Polygon record into a Bar object."""
         try:
             # Polygon uses Unix milliseconds
@@ -178,17 +173,13 @@ class PolygonProvider(HistoricalDataProvider):
             timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
 
             # Extract OHLCV data
-            open_price = Decimal(str(record.get("o", 0)))
-            high_price = Decimal(str(record.get("h", 0)))
-            low_price = Decimal(str(record.get("l", 0)))
-            close_price = Decimal(str(record.get("c", 0)))
+            open_price = float(record.get("o", 0))
+            high_price = float(record.get("h", 0))
+            low_price = float(record.get("l", 0))
+            close_price = float(record.get("c", 0))
             volume = int(record.get("v", 0))
 
             return Bar(
-                symbol=symbol,
-                timeframe=timeframe,
-                session=session,
-                venue=venue,
                 timestamp=timestamp,
                 open=open_price,
                 high=high_price,
@@ -221,7 +212,7 @@ class PolygonProvider(HistoricalDataProvider):
             raise ConnectionError("Not connected to Polygon")
 
         try:
-            polygon_symbol, _ = self._convert_symbol(symbol)
+            polygon_symbol = self._convert_symbol(symbol)
             async with self.session.get(f"{self.base_url}/v3/reference/tickers/{polygon_symbol}") as response:
                 if response.status == 200:
                     data = await response.json()
