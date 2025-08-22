@@ -240,6 +240,11 @@ class SetupProposal(BaseModel):
     # Additional evidence
     volume_analysis: Dict[str, Any] = Field(..., description="Volume-based evidence")
     order_flow: Dict[str, Any] = Field(..., description="Order flow evidence")
+
+    # Detector and risk assessment data
+    evidence: Optional[Dict[str, Any]] = Field(None, description="Detector-specific evidence for the setup.")
+    risk_assessment: Optional[Dict[str, Any]] = Field(None, description="Risk assessment results for the setup.")
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     @model_validator(mode='after')
