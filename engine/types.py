@@ -237,7 +237,6 @@ class SetupProposal(BaseModel):
     tcc_context: Optional[TCC] = Field(None, description="Time cycle context")
     mcs_context: Optional[MCS] = Field(None, description="Market cycle structure")
     
-    risk_assessment: Optional[Dict[str, Any]] = Field(None, description="Risk assessment results")
     # Additional evidence
     volume_analysis: Dict[str, Any] = Field(..., description="Volume-based evidence")
     order_flow: Dict[str, Any] = Field(..., description="Order flow evidence")
