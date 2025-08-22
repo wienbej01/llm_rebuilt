@@ -207,21 +207,19 @@ class LLMGateway:
             "https://api.openai.com/v1/chat/completions",
             headers=headers,
             json=payload,
-            max_attempts=request.retry_attempts
+            max_attempts=request.retry_attempts,
+            timeout=request.timeout
         )
 
-        if response.status_code == 200:
-            data = response.json()
-            return LLMResponse(
-                provider=LLMProvider.OPENAI,
-                model=request.model,
-                content=data["choices"][0]["message"]["content"],
-                usage=data.get("usage", {}),
-                response_time_ms=response.elapsed.total_seconds() * 1000,
-                success=True
-            )
-        else:
-            raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
+        data = response.json()
+        return LLMResponse(
+            provider=LLMProvider.OPENAI,
+            model=request.model,
+            content=data["choices"][0]["message"]["content"],
+            usage=data.get("usage", {}),
+            response_time_ms=response.elapsed.total_seconds() * 1000,
+            success=True
+        )
 
     async def _send_anthropic_request(self, request: LLMRequest, api_key: str) -> LLMResponse:
         """Send request to Anthropic."""
@@ -243,7 +241,7 @@ class LLMGateway:
 
         payload = {
             "model": request.model.value,
-            "max_tokens": request.max_tokens or 1000,
+            "max_tokens": request.max_tokens or 4096,  # Anthropic requires this
             "temperature": request.temperature,
             "system": system_message,
             "messages": user_messages
@@ -254,21 +252,19 @@ class LLMGateway:
             "https://api.anthropic.com/v1/messages",
             headers=headers,
             json=payload,
-            max_attempts=request.retry_attempts
+            max_attempts=request.retry_attempts,
+            timeout=request.timeout
         )
 
-        if response.status_code == 200:
-            data = response.json()
-            return LLMResponse(
-                provider=LLMProvider.ANTHROPIC,
-                model=request.model,
-                content=data["content"][0]["text"],
-                usage=data.get("usage", {}),
-                response_time_ms=response.elapsed.total_seconds() * 1000,
-                success=True
-            )
-        else:
-            raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
+        data = response.json()
+        return LLMResponse(
+            provider=LLMProvider.ANTHROPIC,
+            model=request.model,
+            content=data["content"][0]["text"],
+            usage=data.get("usage", {}),
+            response_time_ms=response.elapsed.total_seconds() * 1000,
+            success=True
+        )
 
     async def _send_gemini_request(self, request: LLMRequest, api_key: str) -> LLMResponse:
         """Send request to Gemini."""
@@ -298,7 +294,7 @@ class LLMGateway:
             "contents": contents,
             "generationConfig": {
                 "temperature": request.temperature,
-                "maxOutputTokens": request.max_tokens or 1000
+                "maxOutputTokens": request.max_tokens or 2048  # Gemini requires this
             }
         }
 
@@ -309,25 +305,26 @@ class LLMGateway:
             url,
             headers=headers,
             json=payload,
-            max_attempts=request.retry_attempts
+            max_attempts=request.retry_attempts,
+            timeout=request.timeout
         )
 
-        if response.status_code == 200:
-            data = response.json()
-            content = ""
-            if "candidates" in data and data["candidates"]:
+        data = response.json()
+        content = ""
+        # It's possible to get a 200 response with no candidates if content is filtered
+        if "candidates" in data and data["candidates"]:
+            # It's also possible for a candidate to have no 'content' key
+            if "content" in data["candidates"][0] and "parts" in data["candidates"][0]["content"]:
                 content = data["candidates"][0]["content"]["parts"][0]["text"]
 
-            return LLMResponse(
-                provider=LLMProvider.GEMINI,
-                model=request.model,
-                content=content,
-                usage=data.get("usageMetadata", {}),
-                response_time_ms=response.elapsed.total_seconds() * 1000,
-                success=True
-            )
-        else:
-            raise Exception(f"Gemini API error: {response.status_code} - {response.text}")
+        return LLMResponse(
+            provider=LLMProvider.GEMINI,
+            model=request.model,
+            content=content,
+            usage=data.get("usageMetadata", {}),
+            response_time_ms=response.elapsed.total_seconds() * 1000,
+            success=True
+        )
 
     async def _retry_request(
         self,
@@ -335,15 +332,25 @@ class LLMGateway:
         url: str,
         headers: Dict[str, str],
         json: Dict[str, Any],
-        max_attempts: int
+        max_attempts: int,
+        timeout: float
     ) -> httpx.Response:
         """Retry HTTP request with exponential backoff."""
         for attempt in range(max_attempts + 1):
             try:
-                response = await self.client.request(method, url, headers=headers, json=json)
+                response = await self.client.request(
+                    method, url, headers=headers, json=json, timeout=timeout
+                )
+                # Raise HTTPStatusError for 4xx/5xx responses
+                response.raise_for_status()
                 return response
-            except Exception as e:
+            except (httpx.RequestError, httpx.HTTPStatusError) as e:
                 if attempt == max_attempts:
+                    logger.error(f"Request failed after {max_attempts + 1} attempts: {e}")
+                    raise
+
+                # Do not retry on client errors (4xx) that are not 429 (rate limit)
+                if isinstance(e, httpx.HTTPStatusError) and 400 <= e.response.status_code < 500 and e.response.status_code != 429:
                     raise
 
                 # Exponential backoff
@@ -411,47 +418,6 @@ class LLMGateway:
         )
 
         return await self.send_request(request)
-
-    async def validate_json_response(
-        self,
-        response: LLMResponse,
-        schema: Optional[BaseModel] = None
-    ) -> Dict[str, Any]:
-        """
-        Validate and parse JSON response from LLM.
-
-        Args:
-            response: LLM response
-            schema: Optional Pydantic schema for validation
-
-        Returns:
-            Parsed JSON data
-
-        Raises:
-            ValueError: If response is not valid JSON
-        """
-        if not response.success:
-            raise ValueError(f"LLM request failed: {response.error_message}")
-
-        try:
-            # Extract JSON from response (handle markdown code blocks)
-            content = response.content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
-
-            data = json.loads(content)
-
-            if schema:
-                return schema.model_validate(data)
-
-            return data
-
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON response: {e}")
-        except Exception as e:
-            raise ValueError(f"Schema validation failed: {e}")
 
     def get_stats(self) -> Dict[str, Any]:
         """Get gateway statistics."""
