@@ -5,11 +5,14 @@ Main engine that processes market data and coordinates all components.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Callable
+from datetime import datetime, timezone, date
+from typing import List, Dict, Any, Optional, Callable, TYPE_CHECKING
 import logging
 import json
 from dataclasses import dataclass, asdict
+
+if TYPE_CHECKING:
+    from data_pipeline.feature_store import FeatureStore
 
 from engine.types import Bar, SetupProposal, Side, SetupType
 from engine.state import MarketState
@@ -343,22 +346,35 @@ class StrategyEngine:
             "hooks": {name: len(hooks) for name, hooks in self.hooks.items()}
         }
 
-    def process_historical_bars(
+    async def process_historical_bars(
         self,
-        bars_5m: List[Bar],
-        bars_1m: List[Bar]
+        feature_store: "FeatureStore",
+        symbol: str,
+        start_date: date,
+        end_date: date
     ) -> List[SetupProposal]:
         """
         Process historical bars and return all setup proposals.
 
         Args:
-            bars_5m: List of 5-minute bars
-            bars_1m: List of 1-minute bars
+            feature_store: The feature store to load data from.
+            symbol: The symbol to process.
+            start_date: The start date of the backtest.
+            end_date: The end date of the backtest.
 
         Returns:
             List of all setup proposals
         """
         all_setups = []
+
+        # Load data from FeatureStore
+        logger.info(f"Loading data for {symbol} from {start_date} to {end_date}...")
+        bars_5m = await feature_store.load_bars(symbol, '5m', start_date, end_date)
+        bars_1m = await feature_store.load_bars(symbol, '1m', start_date, end_date)
+
+        if not bars_5m or not bars_1m:
+            logger.warning(f"No data found for {symbol} in the given date range. Aborting backtest.")
+            return []
 
         logger.info(f"Processing {len(bars_5m)} historical 5m bars")
 
