@@ -160,10 +160,10 @@ class DatabentoProvider(HistoricalDataProvider):
             timestamp = datetime.fromtimestamp(timestamp_ns / 1e9, tz=timezone.utc)
 
             # Extract OHLCV data
-            open_price = Decimal(str(record.get("open", 0)))
-            high_price = Decimal(str(record.get("high", 0)))
-            low_price = Decimal(str(record.get("low", 0)))
-            close_price = Decimal(str(record.get("close", 0)))
+            open_price = float(record.get("open", 0))
+            high_price = float(record.get("high", 0))
+            low_price = float(record.get("low", 0))
+            close_price = float(record.get("close", 0))
             volume = int(record.get("volume", 0))
 
             return Bar(

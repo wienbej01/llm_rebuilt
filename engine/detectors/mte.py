@@ -4,7 +4,6 @@ Detects Momentum Thrust Entry setups.
 """
 
 from __future__ import annotations
-from decimal import Decimal
 
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
@@ -223,7 +222,7 @@ def _calculate_mss_volume_ratio(mss: MSS, market_state: MarketState) -> float:
 def _identify_thrust_pattern(
     mss: MSS,
     market_state: MarketState,
-    min_strength: Decimal
+    min_strength: float
 ) -> Dict[str, Any]:
     """Identify thrust pattern after MSS."""
     if not market_state.bars_5m:
@@ -267,7 +266,7 @@ def _identify_thrust_pattern(
     }
 
 
-def _calculate_bullish_thrust(bars: List[Bar], base_price: Decimal) -> Decimal:
+def _calculate_bullish_thrust(bars: List[Bar], base_price: float) -> float:
     """Calculate bullish thrust strength."""
     if not bars:
         return 0.0
@@ -279,7 +278,7 @@ def _calculate_bullish_thrust(bars: List[Bar], base_price: Decimal) -> Decimal:
     return thrust_strength
 
 
-def _calculate_bearish_thrust(bars: List[Bar], base_price: Decimal) -> Decimal:
+def _calculate_bearish_thrust(bars: List[Bar], base_price: float) -> float:
     """Calculate bearish thrust strength."""
     if not bars:
         return 0.0
@@ -338,7 +337,7 @@ def _calculate_entry_price(
     thrust_info: Dict[str, Any],
     bars_1m_window: List[Bar],
     direction: Side
-) -> Decimal:
+) -> float:
     """Calculate entry price based on thrust pattern."""
     if thrust_info["entry_timing"] == "immediate":
         # Enter at first 1m of next 5m period
@@ -349,25 +348,25 @@ def _calculate_entry_price(
     else:
         # Enter on pullback (simplified)
         if direction == Side.BUY:
-            return thrust_info["breakout_level"] * Decimal('0.999')  # Small discount
+            return thrust_info["breakout_level"] * 0.999  # Small discount
         else:
-            return thrust_info["breakout_level"] * Decimal('1.001')  # Small premium
+            return thrust_info["breakout_level"] * 1.001  # Small premium
 
 
-def _calculate_sl_price(thrust_info: Dict[str, Any], direction: Side) -> Decimal:
+def _calculate_sl_price(thrust_info: Dict[str, Any], direction: Side) -> float:
     """Calculate stop loss price based on thrust pattern."""
     if direction == Side.BUY:
         # For bullish setup, SL below thrust start
-        return thrust_info["breakout_level"] * Decimal('0.995')  # 0.5% buffer
+        return thrust_info["breakout_level"] * 0.995  # 0.5% buffer
     else:
         # For bearish setup, SL above thrust start
-        return thrust_info["breakout_level"] * Decimal('1.005')  # 0.5% buffer
+        return thrust_info["breakout_level"] * 1.005  # 0.5% buffer
 
 
-def _calculate_tp1_price(entry_price: Decimal, sl_price: Decimal, direction: Side) -> Decimal:
+def _calculate_tp1_price(entry_price: float, sl_price: float, direction: Side) -> float:
     """Calculate take profit 1 price."""
     risk_points = abs(entry_price - sl_price)
-    reward_points = risk_points * Decimal('1.5')  # 1:1.5 risk:reward ratio
+    reward_points = risk_points * 1.5  # 1:1.5 risk:reward ratio
 
     if direction == Side.BUY:
         return entry_price + reward_points
@@ -375,12 +374,13 @@ def _calculate_tp1_price(entry_price: Decimal, sl_price: Decimal, direction: Sid
         return entry_price - reward_points
 
 
-def _calculate_risk_reward(entry_price: Decimal, sl_price: Decimal, tp_price: Decimal) -> Decimal:
+def _calculate_risk_reward(entry_price: float, sl_price: float, tp_price: float) -> float:
     """Calculate risk:reward ratio."""
     risk = abs(entry_price - sl_price)
     reward = abs(tp_price - entry_price)
-    if risk == Decimal('0'):
-        return Decimal('0.0')
+
+    if risk == 0:
+        return 0.0
 
     return reward / risk
 

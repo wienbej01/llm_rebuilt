@@ -4,7 +4,6 @@ Pydantic models for LLM input/output validation.
 """
 
 from __future__ import annotations
-from decimal import Decimal
 
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional, Union
@@ -29,7 +28,7 @@ class MarketContext(BaseModel):
     tcc: str = Field(..., description="Time Cycle Completion state")
     mcs: str = Field(..., description="Market Cycle Structure state")
     session: str = Field(..., description="Trading session (RTH/ETH)")
-    spread_estimate: Decimal = Field(..., ge=0, description="Estimated spread")
+    spread_estimate: float = Field(..., ge=0, description="Estimated spread")
     latency_estimate_ms: float = Field(..., ge=0, description="Estimated latency in ms")
 
     model_config = ConfigDict(frozen=True)
@@ -37,9 +36,9 @@ class MarketContext(BaseModel):
 
 class RiskPolicy(BaseModel):
     """Risk policy for LLM."""
-    max_r: Decimal = Field(..., gt=0, description="Max R per trade")
-    daily_dd: Decimal = Field(..., gt=0, le=1, description="Max daily drawdown")
-    sl_cap_points: Decimal = Field(..., gt=0, description="SL cap in points")
+    max_r: float = Field(..., gt=0, description="Max R per trade")
+    daily_dd: float = Field(..., gt=0, le=1, description="Max daily drawdown")
+    sl_cap_points: float = Field(..., gt=0, description="SL cap in points")
     max_trades_per_day: int = Field(..., ge=0, description="Max trades per day")
 
     model_config = ConfigDict(frozen=True)
@@ -57,9 +56,9 @@ class RiskFlags(BaseModel):
 
 class SetupEdit(BaseModel):
     """Setup edit suggestions."""
-    entry: Optional[Decimal] = Field(None, description="Entry price edit")
-    sl: Optional[Decimal] = Field(None, description="Stop loss edit")
-    tp1: Optional[Decimal] = Field(None, description="Take profit 1 edit")
+    entry: Optional[float] = Field(None, description="Entry price edit")
+    sl: Optional[float] = Field(None, description="Stop loss edit")
+    tp1: Optional[float] = Field(None, description="Take profit 1 edit")
 
     model_config = ConfigDict(frozen=True)
 
@@ -146,9 +145,9 @@ class OrderIntent(BaseModel):
     symbol: str = Field(..., description="Trading symbol")
     side: Side = Field(..., description="Order side")
     quantity: int = Field(..., gt=0, description="Order quantity")
-    entry_price: Decimal = Field(..., gt=0, description="Entry price")
-    stop_loss: Decimal = Field(..., gt=0, description="Stop loss price")
-    estimated_risk: Decimal = Field(..., ge=0, description="Estimated risk amount")
+    entry_price: float = Field(..., gt=0, description="Entry price")
+    stop_loss: float = Field(..., gt=0, description="Stop loss price")
+    estimated_risk: float = Field(..., ge=0, description="Estimated risk amount")
 
     model_config = ConfigDict(frozen=True)
 
@@ -156,9 +155,9 @@ class OrderIntent(BaseModel):
 class RiskContext(BaseModel):
     """Risk context for LLM."""
     today_trades_count: int = Field(..., ge=0, description="Trades today")
-    exposure_risk: Decimal = Field(..., ge=0, description="Current exposure risk")
-    spread_estimate: Decimal = Field(..., ge=0, description="Current spread estimate")
-    daily_dd_remaining: Decimal = Field(..., ge=0, le=1, description="Daily drawdown remaining")
+    exposure_risk: float = Field(..., ge=0, description="Current exposure risk")
+    spread_estimate: float = Field(..., ge=0, description="Current spread estimate")
+    daily_dd_remaining: float = Field(..., ge=0, le=1, description="Daily drawdown remaining")
 
     model_config = ConfigDict(frozen=True)
 
@@ -221,7 +220,7 @@ class LLMResponseMetadata(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     response_time_ms: float = Field(..., ge=0, description="Response time in ms")
     tokens_used: int = Field(..., ge=0, description="Tokens used")
-    cost_estimate: Decimal = Field(..., ge=0, description="Cost estimate in USD")
+    cost_estimate: float = Field(..., ge=0, description="Cost estimate in USD")
 
     model_config = ConfigDict(frozen=True)
 
@@ -246,7 +245,7 @@ class LLMStats(BaseModel):
     failed_requests: int = Field(default=0, ge=0, description="Failed requests")
     average_response_time_ms: float = Field(default=0.0, ge=0, description="Average response time")
     total_tokens_used: int = Field(default=0, ge=0, description="Total tokens used")
-    total_cost_estimate: Decimal = Field(default=0.0, ge=0, description="Total cost estimate")
+    total_cost_estimate: float = Field(default=0.0, ge=0, description="Total cost estimate")
     last_request_time: Optional[datetime] = Field(None, description="Last request time")
 
     model_config = ConfigDict(frozen=True)
@@ -297,7 +296,7 @@ def create_market_context(
     tcc: str,
     mcs: str,
     session: str,
-    spread_estimate: Decimal,
+    spread_estimate: float,
     latency_estimate_ms: float
 ) -> MarketContext:
     """
@@ -325,9 +324,9 @@ def create_market_context(
 
 
 def create_risk_policy(
-    max_r: Decimal,
-    daily_dd: Decimal,
-    sl_cap_points: Decimal,
+    max_r: float,
+    daily_dd: float,
+    sl_cap_points: float,
     max_trades_per_day: int
 ) -> RiskPolicy:
     """

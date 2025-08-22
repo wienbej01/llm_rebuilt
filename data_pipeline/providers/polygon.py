@@ -173,10 +173,10 @@ class PolygonProvider(HistoricalDataProvider):
             timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
 
             # Extract OHLCV data
-            open_price = Decimal(str(record.get("o", 0)))
-            high_price = Decimal(str(record.get("h", 0)))
-            low_price = Decimal(str(record.get("l", 0)))
-            close_price = Decimal(str(record.get("c", 0)))
+            open_price = float(record.get("o", 0))
+            high_price = float(record.get("h", 0))
+            low_price = float(record.get("l", 0))
+            close_price = float(record.get("c", 0))
             volume = int(record.get("v", 0))
 
             return Bar(

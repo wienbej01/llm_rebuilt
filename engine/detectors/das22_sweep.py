@@ -4,7 +4,6 @@ Detects Liquidity Sweep & Reversal (post-sweep DAS 2.1) setups.
 """
 
 from __future__ import annotations
-from decimal import Decimal
 
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
@@ -53,14 +52,14 @@ def detect_das22_setups(
     setups = []
 
     # Get configuration parameters
-    min_mqs = float(config.get("min_mqs", 7.0))
-    min_frs = float(config.get("min_frs", 6.0))
-    min_fvg_width = Decimal(str(config.get("min_fvg_width", 0.001)))
-    max_fvg_staleness = float(config.get("max_fvg_staleness", 0.7))
-    retest_tolerance = Decimal(str(config.get("retest_tolerance", 0.0005)))
+    min_mqs = config.get("min_mqs", 7.0)
+    min_frs = config.get("min_frs", 6.0)
+    min_fvg_width = config.get("min_fvg_width", 0.001)
+    max_fvg_staleness = config.get("max_fvg_staleness", 0.7)
+    retest_tolerance = config.get("retest_tolerance", 0.0005)
     min_swing_strength = config.get("min_swing_strength", 6)
-    sweep_lookback = int(config.get("sweep_lookback", 20))
-    min_sweep_strength = Decimal(str(config.get("min_sweep_strength", 0.002)))
+    sweep_lookback = config.get("sweep_lookback", 20)
+    min_sweep_strength = config.get("min_sweep_strength", 0.002)
 
     # Check if we have enough data
     if not market_state.bars_5m or len(market_state.bars_5m) < 30:
@@ -199,7 +198,7 @@ def _detect_liquidity_sweeps(
     return sweeps
 
 
-def _is_level_swept(bar: Bar, level: Dict[str, Any], min_strength: Decimal) -> bool:
+def _is_level_swept(bar: Bar, level: Dict[str, Any], min_strength: float) -> bool:
     """Check if a bar swept a key level."""
     level_price = level["price"]
     level_type = level["type"]
@@ -264,32 +263,32 @@ def _find_post_sweep_fvgs(sweep: Dict[str, Any], fvg_list: List[FVG]) -> List[FV
 def _assess_fvg_quality(
     fvg: FVG,
     market_state: MarketState,
-    min_width: Decimal,
+    min_width: float,
     max_staleness: float
 ) -> float:
     """Assess FVG quality (0-10)."""
     quality = 0.0
 
     # Size quality (0-3 points)
-    fvg_width = (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / Decimal('2'))
-    if min_width * Decimal('2') <= fvg_width <= min_width * Decimal('5'):  # Optimal size
+    fvg_width = (fvg.top - fvg.bottom) / ((fvg.top + fvg.bottom) / 2)
+    if min_width * 2 <= fvg_width <= min_width * 5:  # Optimal size
         quality += 3.0
     elif fvg_width >= min_width:  # Acceptable size
         quality += 2.0
-    elif fvg_width >= min_width * Decimal('0.5'):  # Small but acceptable
+    elif fvg_width >= min_width * 0.5:  # Small but acceptable
         quality += 1.0
 
     # Staleness quality (0-3 points)
     staleness = _calculate_fvg_staleness(fvg, market_state)
-    if float(staleness) <= max_staleness * 0.3:  # Very fresh
+    if staleness <= max_staleness * 0.3:  # Very fresh
         quality += 3.0
-    elif float(staleness) <= max_staleness * 0.7:  # Fresh
+    elif staleness <= max_staleness * 0.7:  # Fresh
         quality += 2.0
-    elif float(staleness) <= max_staleness:  # Acceptable
+    elif staleness <= max_staleness:  # Acceptable
         quality += 1.0
 
     # Retest quality (0-4 points)
-    retest_info = _check_fvg_retest(fvg, market_state, Decimal('0.001'))
+    retest_info = _check_fvg_retest(fvg, market_state, 0.001)
     if retest_info["has_retest"]:
         if retest_info["strength"] >= 0.8:  # Strong retest
             quality += 4.0
@@ -301,21 +300,21 @@ def _assess_fvg_quality(
     return min(10.0, quality)
 
 
-def _calculate_fvg_staleness(fvg: FVG, market_state: MarketState) -> Decimal:
+def _calculate_fvg_staleness(fvg: FVG, market_state: MarketState) -> float:
     """Calculate FVG staleness (0-1, where 1 is most stale)."""
     if not market_state.bars_5m:
-        return Decimal('1.0')
+        return 1.0
 
     current_bar = len(market_state.bars_5m) - 1
     bars_since_creation = current_bar - fvg.end_bar
 
-    return min(Decimal('1.0'), Decimal(bars_since_creation) / Decimal('100.0'))
+    return min(1.0, bars_since_creation / 100.0)
 
 
 def _check_fvg_retest(
     fvg: FVG,
     market_state: MarketState,
-    tolerance: Decimal
+    tolerance: float
 ) -> Dict[str, Any]:
     """Check if FVG has been retested and return retest info."""
     if not market_state.bars_5m:
@@ -342,20 +341,20 @@ def _check_fvg_retest(
     return {"has_retest": False, "retest_price": None, "strength": 0.0}
 
 
-def _calculate_retest_strength(bar: Bar, fvg: FVG, poi_price: Decimal) -> float:
+def _calculate_retest_strength(bar: Bar, fvg: FVG, poi_price: float) -> float:
     """Calculate retest strength (0-1)."""
     # Perfect retest is when price closes exactly at POI
     close_distance = abs(bar.close - poi_price)
     fvg_range = fvg.top - fvg.bottom
 
-    if fvg_range == Decimal('0'):
+    if fvg_range == 0:
         return 0.0
 
     # Normalize distance by FVG range
     normalized_distance = close_distance / fvg_range
 
     # Strength decreases with distance
-    strength = float(max(Decimal('0.0'), Decimal('1.0') - normalized_distance * Decimal('10')))
+    strength = max(0.0, 1.0 - normalized_distance * 10)
 
     return strength
 
@@ -382,7 +381,7 @@ def _get_relevant_swings(
     return relevant
 
 
-def _calculate_sl_price(fvg: FVG, direction: Side) -> Decimal:
+def _calculate_sl_price(fvg: FVG, direction: Side) -> float:
     """Calculate stop loss price based on FVG."""
     if direction == Side.BUY:
         # For bullish setup, SL at bottom of FVG
@@ -392,10 +391,10 @@ def _calculate_sl_price(fvg: FVG, direction: Side) -> Decimal:
         return fvg.top
 
 
-def _calculate_tp1_price(entry_price: Decimal, sl_price: Decimal, direction: Side) -> Decimal:
+def _calculate_tp1_price(entry_price: float, sl_price: float, direction: Side) -> float:
     """Calculate take profit 1 price."""
     risk_points = abs(entry_price - sl_price)
-    reward_points = risk_points * Decimal('1.5')  # 1:1.5 risk:reward ratio
+    reward_points = risk_points * 1.5  # 1:1.5 risk:reward ratio
 
     if direction == Side.BUY:
         return entry_price + reward_points
@@ -403,13 +402,13 @@ def _calculate_tp1_price(entry_price: Decimal, sl_price: Decimal, direction: Sid
         return entry_price - reward_points
 
 
-def _calculate_risk_reward(entry_price: Decimal, sl_price: Decimal, tp_price: Decimal) -> Decimal:
+def _calculate_risk_reward(entry_price: float, sl_price: float, tp_price: float) -> float:
     """Calculate risk:reward ratio."""
     risk = abs(entry_price - sl_price)
     reward = abs(tp_price - entry_price)
 
-    if risk == Decimal('0'):
-        return Decimal('0.0')
+    if risk == 0:
+        return 0.0
 
     return reward / risk
 

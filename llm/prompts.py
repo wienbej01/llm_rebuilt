@@ -5,7 +5,7 @@ Prompt pack for different LLM tasks and roles.
 
 from __future__ import annotations
 from decimal import Decimal
-from typing import Dict, Any, Any
+from typing import Dict, Any
 import json
 
 from llm.schemas import LLMTask, MarketContext, RiskPolicy
