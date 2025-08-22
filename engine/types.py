@@ -4,7 +4,7 @@ All models use Pydantic v2 with strict typing and deterministic JSON serializati
 """
 
 from __future__ import annotations
-from decimal import Decimal
+
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
