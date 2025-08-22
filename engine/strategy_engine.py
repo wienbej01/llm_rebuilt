@@ -246,8 +246,8 @@ class StrategyEngine:
             )
 
             if risk_assessment["is_viable"]:
-                # Create a new setup object with risk assessment data
-                setup = setup.model_copy(update={"risk_assessment": risk_assessment})
+                # Update setup with risk assessment
+                setup.risk_assessment = risk_assessment
                 risk_assessed_setups.append(setup)
 
         return risk_assessed_setups
@@ -446,8 +446,7 @@ class StrategyEngine:
         filtered_setups = []
 
         for setup in setups:
-            risk_assessment = setup.risk_assessment or {}
-            risk_score = risk_assessment.get('risk_score', 10.0)
+            risk_score = getattr(setup, 'risk_assessment', {}).get('risk_score', 10.0)
             if risk_score <= max_risk_score:
                 filtered_setups.append(setup)
 
