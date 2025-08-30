@@ -5,16 +5,14 @@ Implements universal risk management, position sizing, and exposure controls.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
+from enum import Enum
+from typing import Any
 
-import numpy as np
-from numba import jit, float64, int64
+from numba import float64, jit
 
-from engine.types import Bar, SetupProposal, OrderIntent, ExecutionReport
 from engine.state import MarketState
+from engine.types import ExecutionReport, OrderIntent, SetupProposal
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +73,8 @@ class RiskKernel:
         self,
         setup: SetupProposal,
         market_state: MarketState,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Assess risk for a setup proposal.
 
@@ -132,8 +130,8 @@ class RiskKernel:
         self,
         order_intent: OrderIntent,
         market_state: MarketState,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Check risk for an order intent before execution.
 
@@ -216,8 +214,8 @@ class RiskKernel:
         self,
         setup: SetupProposal,
         market_state: MarketState,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Dict[str, Any]]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, dict[str, Any]]:
         """Check all risk limits for a setup."""
         checks = {}
 
@@ -244,7 +242,7 @@ class RiskKernel:
 
         return checks
 
-    def _check_sl_cap(self, setup: SetupProposal, symbol_info: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_sl_cap(self, setup: SetupProposal, symbol_info: dict[str, Any]) -> dict[str, Any]:
         """Check stop loss cap."""
         sl_points = abs(setup.stop_loss - setup.entry_price)
         tick_size = symbol_info.get("tick_size", 0.25)
@@ -262,7 +260,7 @@ class RiskKernel:
 
         return check
 
-    def _check_daily_loss_limit(self) -> Dict[str, Any]:
+    def _check_daily_loss_limit(self) -> dict[str, Any]:
         """Check daily loss limit."""
         daily_loss_limit = self.equity * self.max_daily_loss_pct
 
@@ -282,8 +280,8 @@ class RiskKernel:
     def _check_concurrent_risk_limit(
         self,
         setup: SetupProposal,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check concurrent risk limit."""
         # Calculate risk for this setup
         position_size = self._calculate_position_size(setup, symbol_info)
@@ -305,7 +303,7 @@ class RiskKernel:
 
         return check
 
-    def _check_trades_per_day(self) -> Dict[str, Any]:
+    def _check_trades_per_day(self) -> dict[str, Any]:
         """Check trades per day limit."""
         check = {
             "limit": self.max_trades_per_day,
@@ -320,7 +318,7 @@ class RiskKernel:
 
         return check
 
-    def _check_cool_off_period(self, market_state: MarketState) -> Dict[str, Any]:
+    def _check_cool_off_period(self, market_state: MarketState) -> dict[str, Any]:
         """Check cool off period after loss."""
         if not market_state.bars_5m:
             return {
@@ -349,8 +347,8 @@ class RiskKernel:
     def _check_spread_guard(
         self,
         market_state: MarketState,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check spread guard."""
         # This is a simplified implementation
         # In practice, you'd get real-time spread data
@@ -372,7 +370,7 @@ class RiskKernel:
 
         return check
 
-    def _check_latency_guard(self) -> Dict[str, Any]:
+    def _check_latency_guard(self) -> dict[str, Any]:
         """Check latency guard."""
         # This is a simplified implementation
         # In practice, you'd measure actual latency
@@ -391,7 +389,7 @@ class RiskKernel:
 
         return check
 
-    def _calculate_position_size(self, setup: SetupProposal, symbol_info: Dict[str, Any]) -> int:
+    def _calculate_position_size(self, setup: SetupProposal, symbol_info: dict[str, Any]) -> int:
         """Calculate position size based on risk."""
         # Risk per trade (1R)
         risk_per_trade = self.equity * 0.01  # 1% of equity
@@ -413,7 +411,7 @@ class RiskKernel:
         self,
         setup: SetupProposal,
         position_size: int,
-        symbol_info: Dict[str, Any]
+        symbol_info: dict[str, Any]
     ) -> float:
         """Calculate risk amount for a position."""
         sl_points = abs(setup.stop_loss - setup.entry_price)
@@ -424,8 +422,8 @@ class RiskKernel:
     def _adjust_sl_tp(
         self,
         setup: SetupProposal,
-        symbol_info: Dict[str, Any]
-    ) -> Tuple[float, float]:
+        symbol_info: dict[str, Any]
+    ) -> tuple[float, float]:
         """Adjust stop loss and take profit if needed."""
         adjusted_sl = setup.stop_loss
         adjusted_tp1 = setup.take_profit
@@ -482,8 +480,8 @@ class RiskKernel:
     def _check_concurrent_risk(
         self,
         order_intent: OrderIntent,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check concurrent risk for order intent."""
         # Simplified implementation
         concurrent_risk_limit = self.equity * self.max_concurrent_risk_pct
@@ -502,8 +500,8 @@ class RiskKernel:
     def _check_daily_limits(
         self,
         order_intent: OrderIntent,
-        symbol_info: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        symbol_info: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check daily limits for order intent."""
         daily_loss_limit = self.equity * self.max_daily_loss_pct
 
@@ -526,7 +524,7 @@ class RiskKernel:
         self,
         order_intent: OrderIntent,
         market_state: MarketState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check market conditions for order intent."""
         check = {
             "passed": True,
@@ -551,14 +549,14 @@ class RiskKernel:
     def _adjust_quantity_for_risk(
         self,
         order_intent: OrderIntent,
-        symbol_info: Dict[str, Any]
+        symbol_info: dict[str, Any]
     ) -> int:
         """Adjust order quantity for risk management."""
         # Simplified implementation
         # In practice, you'd calculate based on available risk capacity
         return order_intent.quantity
 
-    def get_risk_summary(self) -> Dict[str, Any]:
+    def get_risk_summary(self) -> dict[str, Any]:
         """Get current risk summary."""
         return {
             "daily_pnl": self.daily_pnl,

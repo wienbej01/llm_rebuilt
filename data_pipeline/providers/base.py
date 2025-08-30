@@ -6,9 +6,10 @@ All data providers must implement this interface for consistent data ingestion.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime, date, timedelta
-from typing import List, Optional, Dict, Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, date, datetime, timedelta
 from enum import Enum
+from typing import Any
 
 from engine.types import Bar
 
@@ -52,7 +53,7 @@ class BaseDataProvider(ABC):
         self.provider_type = provider_type
         self.name = name
         self.connected = False
-        self._last_request_time: Optional[datetime] = None
+        self._last_request_time: datetime | None = None
 
     @abstractmethod
     async def connect(self) -> None:
@@ -72,7 +73,7 @@ class BaseDataProvider(ABC):
         start_date: date,
         end_date: date,
         **kwargs: Any
-    ) -> List[Bar]:
+    ) -> list[Bar]:
         """
         Retrieve historical bar data.
 
@@ -95,12 +96,12 @@ class BaseDataProvider(ABC):
         pass
 
     @abstractmethod
-    async def get_available_symbols(self) -> List[str]:
+    async def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from this provider."""
         pass
 
     @abstractmethod
-    async def get_symbol_info(self, symbol: str) -> Dict[str, Any]:
+    async def get_symbol_info(self, symbol: str) -> dict[str, Any]:
         """Get detailed information about a symbol."""
         pass
 
@@ -128,7 +129,7 @@ class BaseDataProvider(ABC):
         """
         raise NotImplementedError(f"{self.name} does not support streaming")
 
-    def get_provider_info(self) -> Dict[str, Any]:
+    def get_provider_info(self) -> dict[str, Any]:
         """Get information about this provider."""
         return {
             "name": self.name,
@@ -138,17 +139,17 @@ class BaseDataProvider(ABC):
             "capabilities": self.get_capabilities()
         }
 
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> dict[str, Any]:
         """Get provider capabilities."""
         return {
             "historical_data": True,
             "realtime_data": self.provider_type == DataProviderType.REALTIME,
-            "streaming": hasattr(self, 'stream_bars') and callable(getattr(self, 'stream_bars')),
+            "streaming": hasattr(self, 'stream_bars') and callable(self.stream_bars),
             "supported_timeframes": self.get_supported_timeframes(),
             "max_lookback_days": self.get_max_lookback_days()
         }
 
-    def get_supported_timeframes(self) -> List[str]:
+    def get_supported_timeframes(self) -> list[str]:
         """Get list of supported timeframes."""
         return ["1m", "5m", "15m", "1h", "1d"]
 
@@ -158,8 +159,8 @@ class BaseDataProvider(ABC):
 
     def update_last_request_time(self) -> None:
         """Update the last request timestamp."""
-        from datetime import datetime, timezone
-        self._last_request_time = datetime.now(timezone.utc)
+        from datetime import datetime
+        self._last_request_time = datetime.now(UTC)
 
     def validate_timeframe(self, timeframe: str) -> bool:
         """Validate if timeframe is supported."""
@@ -213,7 +214,7 @@ class RealtimeDataProvider(BaseDataProvider):
         start_date: date,
         end_date: date,
         **kwargs: Any
-    ) -> List[Bar]:
+    ) -> list[Bar]:
         """Real-time providers can also provide historical data."""
         raise NotImplementedError(f"{self.name} does not implement historical data retrieval")
 

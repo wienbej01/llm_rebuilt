@@ -5,14 +5,19 @@ DataBento provides high-quality financial market data with low latency.
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, date, timezone
-from typing import List, Dict, Any, Optional
-import json
 import logging
+from datetime import UTC, date, datetime
+from typing import Any
 
-from .base import HistoricalDataProvider, ConnectionError, AuthenticationError, DataNotAvailableError, RateLimitError
 from engine.types import Bar
+
+from .base import (
+    AuthenticationError,
+    ConnectionError,
+    DataNotAvailableError,
+    HistoricalDataProvider,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +81,7 @@ class DatabentoProvider(HistoricalDataProvider):
         start_date: date,
         end_date: date,
         **kwargs: Any
-    ) -> List[Bar]:
+    ) -> list[Bar]:
         """
         Retrieve historical bar data from DataBento.
 
@@ -130,7 +135,7 @@ class DatabentoProvider(HistoricalDataProvider):
             bars = []
             if "data" in data:
                 for record in data["data"]:
-                    bar = self._parse_databento_record(record, symbol)
+                    bar = self._parse_databento_record(record, symbol, timeframe)
                     if bar:
                         bars.append(bar)
 
@@ -152,12 +157,12 @@ class DatabentoProvider(HistoricalDataProvider):
         }
         return conversion_map.get(timeframe, "1m")
 
-    def _parse_databento_record(self, record: Dict[str, Any], symbol: str) -> Optional[Bar]:
+    def _parse_databento_record(self, record: dict[str, Any], symbol: str, timeframe: str) -> Bar | None:
         """Parse a DataBento record into a Bar object."""
         try:
             # DataBento uses Unix nanoseconds
             timestamp_ns = record.get("ts_event", 0)
-            timestamp = datetime.fromtimestamp(timestamp_ns / 1e9, tz=timezone.utc)
+            timestamp = datetime.fromtimestamp(timestamp_ns / 1e9, tz=UTC)
 
             # Extract OHLCV data
             open_price = float(record.get("open", 0))
@@ -167,6 +172,10 @@ class DatabentoProvider(HistoricalDataProvider):
             volume = int(record.get("volume", 0))
 
             return Bar(
+                symbol=symbol,
+                timeframe=timeframe,
+                session="ETH",  # Databento is typically ETH
+                venue=self.name,
                 timestamp=timestamp,
                 open=open_price,
                 high=high_price,
@@ -179,7 +188,7 @@ class DatabentoProvider(HistoricalDataProvider):
             logger.warning(f"Failed to parse DataBento record: {str(e)}")
             return None
 
-    async def get_available_symbols(self) -> List[str]:
+    async def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from DataBento."""
         if not self.connected:
             raise ConnectionError("Not connected to DataBento")
@@ -199,7 +208,7 @@ class DatabentoProvider(HistoricalDataProvider):
             logger.error(f"Error retrieving symbols from DataBento: {str(e)}")
             return []
 
-    async def get_symbol_info(self, symbol: str) -> Dict[str, Any]:
+    async def get_symbol_info(self, symbol: str) -> dict[str, Any]:
         """Get detailed information about a symbol."""
         if not self.connected:
             raise ConnectionError("Not connected to DataBento")
@@ -226,7 +235,7 @@ class DatabentoProvider(HistoricalDataProvider):
         except Exception:
             return False
 
-    def get_supported_timeframes(self) -> List[str]:
+    def get_supported_timeframes(self) -> list[str]:
         """Get list of supported timeframes."""
         return ["1m", "5m", "15m", "1h", "1d"]
 

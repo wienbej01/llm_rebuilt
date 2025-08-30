@@ -5,15 +5,14 @@ Detects Liquidity Sweep & Reversal (post-sweep DAS 2.1) setups.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 import logging
+from typing import Any
 
 import numpy as np
 
-from engine.types import SetupProposal, Bar, Side, SetupType, SwingPoint, MSS, FVG
-from engine.state import MarketState
 from engine.detectors.registry import register_detector
+from engine.state import MarketState
+from engine.types import FVG, MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +34,9 @@ logger = logging.getLogger(__name__)
 )
 def detect_das22_setups(
     market_state: MarketState,
-    bars_1m_window: List[Bar],
-    config: Dict[str, Any]
-) -> List[SetupProposal]:
+    bars_1m_window: list[Bar],
+    config: dict[str, Any]
+) -> list[SetupProposal]:
     """
     Detect DAS 2.2 setups: Liquidity Sweep & Reversal (post-sweep DAS 2.1).
 
@@ -154,10 +153,10 @@ def detect_das22_setups(
 
 def _detect_liquidity_sweeps(
     market_state: MarketState,
-    swings: List[SwingPoint],
+    swings: list[SwingPoint],
     lookback: int,
     min_strength: float
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Detect liquidity sweeps in recent price action."""
     sweeps = []
 
@@ -198,7 +197,7 @@ def _detect_liquidity_sweeps(
     return sweeps
 
 
-def _is_level_swept(bar: Bar, level: Dict[str, Any], min_strength: float) -> bool:
+def _is_level_swept(bar: Bar, level: dict[str, Any], min_strength: float) -> bool:
     """Check if a bar swept a key level."""
     level_price = level["price"]
     level_type = level["type"]
@@ -211,7 +210,7 @@ def _is_level_swept(bar: Bar, level: Dict[str, Any], min_strength: float) -> boo
         return bar.close > level_price and (level_price - bar.low) / level_price >= min_strength
 
 
-def _calculate_sweep_strength(bar: Bar, level: Dict[str, Any]) -> float:
+def _calculate_sweep_strength(bar: Bar, level: dict[str, Any]) -> float:
     """Calculate sweep strength (0-1)."""
     level_price = level["price"]
     level_type = level["type"]
@@ -230,7 +229,7 @@ def _calculate_sweep_strength(bar: Bar, level: Dict[str, Any]) -> float:
     return min(1.0, normalized_distance * 100 * volume_factor)
 
 
-def _find_reversal_mss(sweep: Dict[str, Any], mss_list: List[MSS]) -> Optional[MSS]:
+def _find_reversal_mss(sweep: dict[str, Any], mss_list: list[MSS]) -> MSS | None:
     """Find MSS that confirms reversal after sweep."""
     sweep_bar = sweep["bar_index"]
     sweep_direction = sweep["direction"]
@@ -248,7 +247,7 @@ def _find_reversal_mss(sweep: Dict[str, Any], mss_list: List[MSS]) -> Optional[M
     return None
 
 
-def _find_post_sweep_fvgs(sweep: Dict[str, Any], fvg_list: List[FVG]) -> List[FVG]:
+def _find_post_sweep_fvgs(sweep: dict[str, Any], fvg_list: list[FVG]) -> list[FVG]:
     """Find FVGs created after sweep."""
     sweep_bar = sweep["bar_index"]
     post_sweep_fvgs = []
@@ -315,7 +314,7 @@ def _check_fvg_retest(
     fvg: FVG,
     market_state: MarketState,
     tolerance: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check if FVG has been retested and return retest info."""
     if not market_state.bars_5m:
         return {"has_retest": False, "retest_price": None, "strength": 0.0}
@@ -360,11 +359,11 @@ def _calculate_retest_strength(bar: Bar, fvg: FVG, poi_price: float) -> float:
 
 
 def _get_relevant_swings(
-    swings: List[SwingPoint],
+    swings: list[SwingPoint],
     mss: MSS,
     fvg: FVG,
     min_strength: int
-) -> List[SwingPoint]:
+) -> list[SwingPoint]:
     """Get relevant swing points for the setup."""
     relevant = []
 

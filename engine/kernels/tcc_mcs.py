@@ -5,16 +5,16 @@ Implements Time Cycle Completion (TCC) and Market Cycle Structure (MCS) analysis
 
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
 
 import numpy as np
-from numba import jit, float64, int64
+from numba import float64, jit
 
-from engine.types import Bar, TCC, MCS
 from engine.state import MarketState
+from engine.types import MCS, TCC, Bar
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +103,13 @@ class TCCMCSKernel:
             structure_type=trend_state.value,
             bias=cycle_phase.value,
             key_levels=key_levels,
-            last_updated=datetime.now(timezone.utc)
+            last_updated=datetime.now(UTC)
         )
 
         market_state.current_mcs = mcs
         market_state.add_mcs(mcs)
 
-    def _detect_cycle_completions(self, bars: List[Bar]) -> List[TCC]:
+    def _detect_cycle_completions(self, bars: list[Bar]) -> list[TCC]:
         """Detect Time Cycle Completions in the bar series."""
         if len(bars) < 10:
             return []
@@ -162,7 +162,7 @@ class TCCMCSKernel:
 
         return completions
 
-    def _estimate_cycle_length(self, bars: List[Bar], center_index: int) -> int:
+    def _estimate_cycle_length(self, bars: list[Bar], center_index: int) -> int:
         """Estimate the length of a cycle."""
         # Simplified cycle length estimation
         # Look for similar patterns in the past
@@ -182,7 +182,7 @@ class TCCMCSKernel:
 
         return 0
 
-    def _classify_cycle_type(self, bars: List[Bar], center_index: int) -> str:
+    def _classify_cycle_type(self, bars: list[Bar], center_index: int) -> str:
         """Classify the type of cycle."""
         if center_index < 5:
             return "unknown"
@@ -211,7 +211,7 @@ class TCCMCSKernel:
         else:
             return "sideways"
 
-    def _calculate_cycle_strength(self, bars: List[Bar], center_index: int) -> int:
+    def _calculate_cycle_strength(self, bars: list[Bar], center_index: int) -> int:
         """Calculate the strength of a cycle."""
         if center_index < 5 or center_index >= len(bars) - 5:
             return 1
@@ -228,7 +228,7 @@ class TCCMCSKernel:
         strength = min(10, int(max_deviation * 500))
         return max(1, strength)
 
-    def _analyze_trend_state(self, bars: List[Bar]) -> TrendState:
+    def _analyze_trend_state(self, bars: list[Bar]) -> TrendState:
         """Analyze current trend state."""
         if len(bars) < self.trend_lookback:
             return TrendState.UNKNOWN
@@ -247,7 +247,7 @@ class TCCMCSKernel:
         else:
             return TrendState.TREND_DOWN
 
-    def _determine_cycle_phase(self, market_state: MarketState, bars: List[Bar]) -> CyclePhase:
+    def _determine_cycle_phase(self, market_state: MarketState, bars: list[Bar]) -> CyclePhase:
         """Determine current market cycle phase."""
         if len(bars) < self.trend_lookback:
             return CyclePhase.UNKNOWN
@@ -269,7 +269,7 @@ class TCCMCSKernel:
         else:
             return CyclePhase.ACCUMULATION  # Default to accumulation in range
 
-    def _identify_key_levels(self, market_state: MarketState, bars: List[Bar]) -> List[float]:
+    def _identify_key_levels(self, market_state: MarketState, bars: list[Bar]) -> list[float]:
         """Identify key support/resistance levels."""
         if len(bars) < 20:
             return []
@@ -296,7 +296,7 @@ class TCCMCSKernel:
         # Return top 5 levels
         return levels[:5]
 
-    def _calculate_trend_slope(self, prices: List[float]) -> float:
+    def _calculate_trend_slope(self, prices: list[float]) -> float:
         """Calculate trend slope using linear regression."""
         x = np.arange(len(prices))
         y = np.array(prices)
@@ -305,7 +305,7 @@ class TCCMCSKernel:
         slope, _ = np.polyfit(x, y, 1)
         return slope
 
-    def _calculate_volatility(self, prices: List[float]) -> float:
+    def _calculate_volatility(self, prices: list[float]) -> float:
         """Calculate price volatility."""
         if len(prices) < 2:
             return 0.0
@@ -350,7 +350,7 @@ class TCCMCSKernel:
 
         return (strength_score * 0.7 + recency_score * 0.3)
 
-    def get_market_structure_summary(self, market_state: MarketState) -> Dict[str, Any]:
+    def get_market_structure_summary(self, market_state: MarketState) -> dict[str, Any]:
         """Get comprehensive market structure summary."""
         return {
             "trend_state": self._analyze_trend_state(market_state.get_latest_5m_bars(self.trend_lookback)).value,

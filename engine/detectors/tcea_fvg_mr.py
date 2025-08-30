@@ -5,15 +5,14 @@ Detects Missed FVG → Mean Reversion (re-entry) setups.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 import logging
+from typing import Any
 
 import numpy as np
 
-from engine.types import SetupProposal, Bar, Side, SetupType, SwingPoint, MSS, FVG
-from engine.state import MarketState
 from engine.detectors.registry import register_detector
+from engine.state import MarketState
+from engine.types import FVG, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +33,9 @@ logger = logging.getLogger(__name__)
 )
 def detect_tcea_fvg_mr_setups(
     market_state: MarketState,
-    bars_1m_window: List[Bar],
-    config: Dict[str, Any]
-) -> List[SetupProposal]:
+    bars_1m_window: list[Bar],
+    config: dict[str, Any]
+) -> list[SetupProposal]:
     """
     Detect TCEA-FVG-MR setups: Missed FVG → Mean Reversion (re-entry).
 
@@ -160,7 +159,7 @@ def _check_fvg_reaction(
     fvg: FVG,
     market_state: MarketState,
     min_strength: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check if there was a strong reaction to the FVG."""
     if not market_state.bars_5m:
         return {"has_reaction": False, "strength": 0.0, "distance": 0.0, "direction": "unknown"}
@@ -228,9 +227,9 @@ def _calculate_reaction_volume_ratio(fvg: FVG, market_state: MarketState) -> flo
 def _check_1m_pullback_mss(
     fvg: FVG,
     market_state: MarketState,
-    bars_1m_window: List[Bar],
+    bars_1m_window: list[Bar],
     min_swing_strength: int
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check for 1m pullback with MSS confirmation."""
     if not bars_1m_window:
         return {"has_pullback": False, "strength": 0.0, "breakout_price": None}
@@ -258,10 +257,10 @@ def _check_1m_pullback_mss(
 
 
 def _identify_pullback_pattern(
-    bars_1m_window: List[Bar],
-    swings_1m: List[SwingPoint],
+    bars_1m_window: list[Bar],
+    swings_1m: list[SwingPoint],
     fvg: FVG
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Identify pullback pattern in 1m data."""
     if len(bars_1m_window) < 10:
         return {"has_pullback": False, "strength": 0.0}
@@ -305,7 +304,7 @@ def _identify_pullback_pattern(
     }
 
 
-def _check_mss_confirmation(pullback_info: Dict[str, Any], market_state: MarketState) -> Dict[str, Any]:
+def _check_mss_confirmation(pullback_info: dict[str, Any], market_state: MarketState) -> dict[str, Any]:
     """Check for MSS confirmation of pullback."""
     recent_mss = market_state.get_recent_mss(5)
 
@@ -332,7 +331,7 @@ def _determine_setup_direction(fvg: FVG, reaction_direction: str) -> Side:
         return Side.SELL if reaction_direction == "bullish" else Side.BUY
 
 
-def _calculate_sl_price(pullback_info: Dict[str, Any], direction: Side, max_sl_points: float) -> float:
+def _calculate_sl_price(pullback_info: dict[str, Any], direction: Side, max_sl_points: float) -> float:
     """Calculate stop loss price based on pullback."""
     if direction == Side.BUY:
         # For bullish setup, SL below pullback low

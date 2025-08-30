@@ -5,11 +5,11 @@ Manages bars, swings, MSS, FVGs, TCC/MCS with efficient updates and snapshots.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
 
-from .types import Bar, SwingPoint, MSS, FVG, TCC, MCS
+from .types import FVG, MCS, MSS, TCC, Bar, SwingPoint
 
 
 @dataclass
@@ -26,18 +26,18 @@ class MarketState:
     max_mcs: int = 5          # Keep last 5 market cycle structures
 
     # Rolling data containers
-    bars_1m: List[Bar] = field(default_factory=list)
-    bars_5m: List[Bar] = field(default_factory=list)
-    swing_points: List[SwingPoint] = field(default_factory=list)
-    mss_list: List[MSS] = field(default_factory=list)
-    fvgs: List[FVG] = field(default_factory=list)
-    tcc_history: List[TCC] = field(default_factory=list)
-    mcs_history: List[MCS] = field(default_factory=list)
+    bars_1m: list[Bar] = field(default_factory=list)
+    bars_5m: list[Bar] = field(default_factory=list)
+    swing_points: list[SwingPoint] = field(default_factory=list)
+    mss_list: list[MSS] = field(default_factory=list)
+    fvgs: list[FVG] = field(default_factory=list)
+    tcc_history: list[TCC] = field(default_factory=list)
+    mcs_history: list[MCS] = field(default_factory=list)
 
     # Current state
-    current_tcc: Optional[TCC] = None
-    current_mcs: Optional[MCS] = None
-    last_update: Optional[datetime] = None
+    current_tcc: TCC | None = None
+    current_mcs: MCS | None = None
+    last_update: datetime | None = None
 
     # Metadata
     symbol: str = ""
@@ -90,23 +90,23 @@ class MarketState:
         if len(self.mcs_history) > self.max_mcs:
             self.mcs_history.pop(0)
 
-    def get_latest_1m_bars(self, n: int) -> List[Bar]:
+    def get_latest_1m_bars(self, n: int) -> list[Bar]:
         """Get the latest n 1-minute bars."""
         return self.bars_1m[-n:] if len(self.bars_1m) >= n else self.bars_1m.copy()
 
-    def get_latest_5m_bars(self, n: int) -> List[Bar]:
+    def get_latest_5m_bars(self, n: int) -> list[Bar]:
         """Get the latest n 5-minute bars."""
         return self.bars_5m[-n:] if len(self.bars_5m) >= n else self.bars_5m.copy()
 
-    def get_recent_swings(self, n: int) -> List[SwingPoint]:
+    def get_recent_swings(self, n: int) -> list[SwingPoint]:
         """Get the most recent n swing points."""
         return self.swing_points[-n:] if len(self.swing_points) >= n else self.swing_points.copy()
 
-    def get_active_fvgs(self) -> List[FVG]:
+    def get_active_fvgs(self) -> list[FVG]:
         """Get all active (unfilled) fair value gaps."""
         return [fvg for fvg in self.fvgs if not fvg.is_filled]
 
-    def get_valid_mss(self) -> List[MSS]:
+    def get_valid_mss(self) -> list[MSS]:
         """Get all valid market structure shifts."""
         return [mss for mss in self.mss_list if mss.is_valid]
 
@@ -137,7 +137,7 @@ class MarketState:
             len(self.swing_points) >= min_swings
         )
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Create a snapshot of current state for serialization."""
         return {
             "symbol": self.symbol,
@@ -156,7 +156,7 @@ class MarketState:
             "is_warm": self.is_warm()
         }
 
-    def restore_from_snapshot(self, snapshot: Dict[str, Any]) -> None:
+    def restore_from_snapshot(self, snapshot: dict[str, Any]) -> None:
         """Restore state from a snapshot (for testing/debugging)."""
         self.symbol = snapshot.get("symbol", "")
         self.initialized = snapshot.get("initialized", False)
@@ -171,13 +171,13 @@ class EngineState:
     """Global engine state container."""
 
     # Market states by symbol
-    market_states: Dict[str, MarketState] = field(default_factory=dict)
+    market_states: dict[str, MarketState] = field(default_factory=dict)
 
     # Global counters and metrics
     total_bars_processed: int = 0
     total_setups_generated: int = 0
     total_orders_executed: int = 0
-    engine_start_time: Optional[datetime] = None
+    engine_start_time: datetime | None = None
 
     # Performance tracking
     avg_processing_time_ms: float = 0.0
@@ -201,7 +201,7 @@ class EngineState:
         self.max_processing_time_ms = 0.0
         self.error_count = 0
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Create a snapshot of engine state."""
         return {
             "total_bars_processed": self.total_bars_processed,

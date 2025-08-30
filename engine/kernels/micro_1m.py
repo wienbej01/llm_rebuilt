@@ -5,16 +5,16 @@ Analyzes 1-minute bars for micro-structure clues and confirmation signals.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
 
 import numpy as np
-from numba import jit, float64, int64
+from numba import float64, jit
 
-from engine.types import Bar, SwingPoint, FVG
 from engine.state import MarketState
+from engine.types import Bar
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class Micro1mKernel:
         self.volume_threshold = volume_threshold
         self.price_threshold = price_threshold
 
-    def analyze_micro_structure(self, market_state: MarketState, bars_1m: List[Bar]) -> Dict[str, Any]:
+    def analyze_micro_structure(self, market_state: MarketState, bars_1m: list[Bar]) -> dict[str, Any]:
         """
         Analyze 1-minute micro-structure for confirmation clues.
 
@@ -103,13 +103,13 @@ class Micro1mKernel:
             "signal_count": len(micro_signals),
             "analysis": signal_analysis,
             "summary": self._generate_micro_summary(micro_signals, signal_analysis),
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.now(UTC)
         }
 
         logger.debug(f"Micro analysis: {len(micro_signals)} signals detected")
         return result
 
-    def _detect_micro_pullbacks(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_micro_pullbacks(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect micro pullbacks in 1-minute data."""
         if len(bars_1m) < 10:
             return []
@@ -142,7 +142,7 @@ class Micro1mKernel:
 
         return pullbacks
 
-    def _detect_micro_fvgs(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_micro_fvgs(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect micro Fair Value Gaps in 1-minute data."""
         if len(bars_1m) < 3:
             return []
@@ -186,7 +186,7 @@ class Micro1mKernel:
 
         return micro_fvgs
 
-    def _detect_micro_swings(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_micro_swings(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect micro swing points in 1-minute data."""
         if len(bars_1m) < 5:
             return []
@@ -230,7 +230,7 @@ class Micro1mKernel:
 
         return micro_swings
 
-    def _detect_volume_spikes(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_volume_spikes(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect volume spikes in 1-minute data."""
         if len(bars_1m) < 10:
             return []
@@ -256,7 +256,7 @@ class Micro1mKernel:
 
         return volume_spikes
 
-    def _detect_price_rejection(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_price_rejection(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect price rejection patterns in 1-minute data."""
         if len(bars_1m) < 3:
             return []
@@ -303,7 +303,7 @@ class Micro1mKernel:
 
         return price_rejections
 
-    def _detect_momentum_shifts(self, bars_1m: List[Bar]) -> List[Dict[str, Any]]:
+    def _detect_momentum_shifts(self, bars_1m: list[Bar]) -> list[dict[str, Any]]:
         """Detect momentum shifts in 1-minute data."""
         if len(bars_1m) < 10:
             return []
@@ -332,7 +332,7 @@ class Micro1mKernel:
 
         return momentum_shifts
 
-    def _calculate_local_trend(self, prices: List[float]) -> float:
+    def _calculate_local_trend(self, prices: list[float]) -> float:
         """Calculate local trend over a small window."""
         if len(prices) < 2:
             return 0.0
@@ -348,7 +348,7 @@ class Micro1mKernel:
 
         return slope / avg_price
 
-    def _calculate_pullback_strength(self, bars_1m: List[Bar], index: int) -> float:
+    def _calculate_pullback_strength(self, bars_1m: list[Bar], index: int) -> float:
         """Calculate pullback strength."""
         if index < 3 or index >= len(bars_1m) - 3:
             return 0.0
@@ -363,7 +363,7 @@ class Micro1mKernel:
 
         return min(1.0, price_range / avg_price * 100)
 
-    def _calculate_micro_swing_strength(self, bars_1m: List[Bar], index: int, swing_type: str) -> float:
+    def _calculate_micro_swing_strength(self, bars_1m: list[Bar], index: int, swing_type: str) -> float:
         """Calculate micro swing strength."""
         if index < 2 or index >= len(bars_1m) - 2:
             return 0.0
@@ -385,7 +385,7 @@ class Micro1mKernel:
 
         return min(1.0, dominance_count / 6.0)
 
-    def _analyze_price_action_at_spike(self, bars_1m: List[Bar], index: int) -> str:
+    def _analyze_price_action_at_spike(self, bars_1m: list[Bar], index: int) -> str:
         """Analyze price action at volume spike."""
         if index == 0 or index >= len(bars_1m):
             return "unknown"
@@ -403,7 +403,7 @@ class Micro1mKernel:
         else:
             return "mixed"
 
-    def _calculate_momentum(self, prices: List[float]) -> float:
+    def _calculate_momentum(self, prices: list[float]) -> float:
         """Calculate momentum over a window."""
         if len(prices) < 2:
             return 0.0
@@ -412,7 +412,7 @@ class Micro1mKernel:
         returns = np.diff(prices) / prices[:-1]
         return np.mean(returns)
 
-    def _analyze_signal_quality(self, signals: List[Dict[str, Any]], market_state: MarketState) -> Dict[str, Any]:
+    def _analyze_signal_quality(self, signals: list[dict[str, Any]], market_state: MarketState) -> dict[str, Any]:
         """Analyze quality and alignment of micro signals."""
         if not signals:
             return {"quality": 0.0, "alignment": "none", "confidence": 0.0}
@@ -471,7 +471,7 @@ class Micro1mKernel:
             "bearish_count": bearish_signals
         }
 
-    def _generate_micro_summary(self, signals: List[Dict[str, Any]], analysis: Dict[str, Any]) -> str:
+    def _generate_micro_summary(self, signals: list[dict[str, Any]], analysis: dict[str, Any]) -> str:
         """Generate summary of micro analysis."""
         if not signals:
             return "No significant micro signals detected"

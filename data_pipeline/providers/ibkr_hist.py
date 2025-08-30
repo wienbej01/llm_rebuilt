@@ -6,12 +6,17 @@ Uses IBKR TWS API for historical market data with RTH/ETH session support.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, date, timezone, timedelta
-from typing import List, Dict, Any, Optional
 import logging
+from datetime import UTC, date
+from typing import Any
 
-from .base import HistoricalDataProvider, ConnectionError, AuthenticationError, DataNotAvailableError
 from engine.types import Bar
+
+from .base import (
+    ConnectionError,
+    DataNotAvailableError,
+    HistoricalDataProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +82,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
         start_date: date,
         end_date: date,
         **kwargs: Any
-    ) -> List[Bar]:
+    ) -> list[Bar]:
         """
         Retrieve historical bar data from IBKR.
 
@@ -123,7 +128,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
             # Convert IBKR bars to our Bar objects
             result_bars = []
             for ib_bar in bars:
-                bar = self._convert_ibkr_bar(ib_bar, symbol)
+                bar = self._convert_ibkr_bar(ib_bar, symbol, timeframe, session)
                 if bar:
                     result_bars.append(bar)
 
@@ -136,7 +141,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
 
     def _create_contract(self, symbol: str) -> Any:
         """Create IBKR contract for the given symbol."""
-        from ib_insync import Contract, Ticker
+        from ib_insync import Contract
 
         # Map symbols to IBKR contracts
         contract_map = {
@@ -185,13 +190,17 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
         bar_size = timeframe_map.get(timeframe, "5 mins")
         return duration, bar_size
 
-    def _convert_ibkr_bar(self, ib_bar: Any, symbol: str) -> Optional[Bar]:
+    def _convert_ibkr_bar(self, ib_bar: Any, symbol: str, timeframe: str, session: str) -> Bar | None:
         """Convert IBKR bar to our Bar object."""
         try:
             # IBKR uses timezone-aware datetime
-            timestamp = ib_bar.date.replace(tzinfo=timezone.utc) if ib_bar.date.tzinfo is None else ib_bar.date.astimezone(timezone.utc)
+            timestamp = ib_bar.date.replace(tzinfo=UTC) if ib_bar.date.tzinfo is None else ib_bar.date.astimezone(UTC)
 
             return Bar(
+                symbol=symbol,
+                timeframe=timeframe,
+                session=session,
+                venue=self.name,
                 timestamp=timestamp,
                 open=float(ib_bar.open),
                 high=float(ib_bar.high),
@@ -204,7 +213,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
             logger.warning(f"Failed to parse IBKR bar: {str(e)}")
             return None
 
-    async def get_available_symbols(self) -> List[str]:
+    async def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from IBKR."""
         if not self.connected:
             raise ConnectionError("Not connected to IBKR")
@@ -217,7 +226,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
             logger.error(f"Error retrieving symbols from IBKR: {str(e)}")
             return []
 
-    async def get_symbol_info(self, symbol: str) -> Dict[str, Any]:
+    async def get_symbol_info(self, symbol: str) -> dict[str, Any]:
         """Get detailed information about a symbol."""
         if not self.connected or not self.ib:
             raise ConnectionError("Not connected to IBKR")
@@ -259,7 +268,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
         except Exception:
             return False
 
-    def get_supported_timeframes(self) -> List[str]:
+    def get_supported_timeframes(self) -> list[str]:
         """Get list of supported timeframes."""
         return ["1m", "5m", "15m", "1h", "1d"]
 
@@ -267,7 +276,7 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
         """Get maximum lookback period in days."""
         return 365 * 5  # 5 years for IBKR historical data
 
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> dict[str, Any]:
         """Get provider capabilities."""
         base_capabilities = super().get_capabilities()
         base_capabilities.update({

@@ -6,19 +6,24 @@ Handles market/limit fills, slippage/spread models, fees, and SL/TP/partial brac
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple, Any
-from decimal import Decimal
 import logging
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from decimal import Decimal
 from enum import Enum
+from typing import Any
 
 import numpy as np
 
 from engine.types import (
-    OrderIntent, ExecutionReport, OrderStatus, OrderType, Side,
-    TimeInForce, Bar
+    Bar,
+    ExecutionReport,
+    OrderIntent,
+    OrderStatus,
+    OrderType,
+    Side,
+    TimeInForce,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,20 +47,20 @@ class OrderState:
     quantity: int
     filled_quantity: int = 0
     remaining_quantity: int = 0
-    price: Optional[Decimal] = None
-    stop_price: Optional[Decimal] = None
+    price: Decimal | None = None
+    stop_price: Decimal | None = None
     time_in_force: TimeInForce = TimeInForce.DAY
     status: OrderStatus = OrderStatus.PENDING
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    fills: List[ExecutionReport] = field(default_factory=list)
-    average_fill_price: Optional[Decimal] = None
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    fills: list[ExecutionReport] = field(default_factory=list)
+    average_fill_price: Decimal | None = None
     commission: Decimal = Decimal('0')
     slippage: Decimal = Decimal('0')
-    mae: Optional[Decimal] = None  # Maximum Adverse Excursion
-    mfe: Optional[Decimal] = None  # Maximum Favorable Excursion
+    mae: Decimal | None = None  # Maximum Adverse Excursion
+    mfe: Decimal | None = None  # Maximum Favorable Excursion
     duration_seconds: float = 0.0
-    bracket_orders: List[str] = field(default_factory=list)  # SL/TP order IDs
+    bracket_orders: list[str] = field(default_factory=list)  # SL/TP order IDs
 
     def __post_init__(self):
         """Initialize remaining quantity."""
@@ -122,7 +127,7 @@ class SimBrokerConfig:
 class SimBroker:
     """Simulation broker for backtesting and paper trading."""
 
-    def __init__(self, config: Optional[SimBrokerConfig] = None):
+    def __init__(self, config: SimBrokerConfig | None = None):
         """
         Initialize simulation broker.
 
@@ -132,11 +137,11 @@ class SimBroker:
         self.config = config or SimBrokerConfig()
 
         # State tracking
-        self.orders: Dict[str, OrderState] = {}
-        self.positions: Dict[str, Position] = {}
-        self.executions: List[ExecutionReport] = []
-        self.daily_pnl: List[Decimal] = []
-        self.equity_curve: List[Tuple[datetime, Decimal]] = []
+        self.orders: dict[str, OrderState] = {}
+        self.positions: dict[str, Position] = {}
+        self.executions: list[ExecutionReport] = []
+        self.daily_pnl: list[Decimal] = []
+        self.equity_curve: list[tuple[datetime, Decimal]] = []
 
         # Account state
         self.initial_capital = self.config.initial_capital
@@ -146,8 +151,8 @@ class SimBroker:
         self.total_slippage = Decimal('0')
 
         # Market data
-        self.current_prices: Dict[str, Decimal] = {}
-        self.current_bars: Dict[str, Bar] = {}
+        self.current_prices: dict[str, Decimal] = {}
+        self.current_bars: dict[str, Bar] = {}
 
         # Statistics
         self.stats = {
@@ -240,7 +245,7 @@ class SimBroker:
             return False
 
         order.status = OrderStatus.CANCELLED
-        order.updated_at = datetime.now(timezone.utc)
+        order.updated_at = datetime.now(UTC)
         self.stats["cancelled_orders"] += 1
 
         logger.debug(f"Cancelled order: {order_id}")
@@ -253,7 +258,7 @@ class SimBroker:
         take_profit: Decimal,
         stop_loss_order_type: OrderType = OrderType.STOP,
         take_profit_order_type: OrderType = OrderType.LIMIT
-    ) -> Tuple[str, str, str]:
+    ) -> tuple[str, str, str]:
         """
         Place bracket order (entry + SL + TP).
 
@@ -305,7 +310,7 @@ class SimBroker:
         logger.debug(f"Placed bracket order: entry={entry_id}, sl={stop_loss_id}, tp={take_profit_id}")
         return entry_id, stop_loss_id, take_profit_id
 
-    def get_order_status(self, order_id: str) -> Optional[OrderState]:
+    def get_order_status(self, order_id: str) -> OrderState | None:
         """
         Get order status.
 
@@ -317,7 +322,7 @@ class SimBroker:
         """
         return self.orders.get(order_id)
 
-    def get_position(self, symbol: str) -> Optional[Position]:
+    def get_position(self, symbol: str) -> Position | None:
         """
         Get position for symbol.
 
@@ -329,7 +334,7 @@ class SimBroker:
         """
         return self.positions.get(symbol)
 
-    def get_all_positions(self) -> Dict[str, Position]:
+    def get_all_positions(self) -> dict[str, Position]:
         """
         Get all positions.
 
@@ -338,7 +343,7 @@ class SimBroker:
         """
         return self.positions.copy()
 
-    def get_account_summary(self) -> Dict[str, Any]:
+    def get_account_summary(self) -> dict[str, Any]:
         """
         Get account summary.
 
@@ -362,7 +367,7 @@ class SimBroker:
             "positions": len(self.positions)
         }
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """
         Get trading statistics.
 
@@ -541,7 +546,7 @@ class SimBroker:
         order.average_fill_price = self._calculate_average_fill_price(order)
         order.commission += commission
         order.slippage += slippage
-        order.updated_at = datetime.now(timezone.utc)
+        order.updated_at = datetime.now(UTC)
 
         # Update order status
         if order.remaining_quantity == 0:
@@ -680,7 +685,7 @@ class SimBroker:
         )
         self.equity_curve.append((timestamp, total_equity))
 
-    def _cancel_bracket_orders(self, bracket_order_ids: List[str]) -> None:
+    def _cancel_bracket_orders(self, bracket_order_ids: list[str]) -> None:
         """Cancel bracket orders."""
         for order_id in bracket_order_ids:
             self.cancel_order(order_id)
@@ -714,7 +719,7 @@ class SimBroker:
 
         logger.info("SimBroker reset")
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get broker state for serialization."""
         return {
             "config": {
@@ -731,7 +736,7 @@ class SimBroker:
             "equity_curve": [(ts.isoformat(), float(eq)) for ts, eq in self.equity_curve]
         }
 
-    def _order_to_dict(self, order: OrderState) -> Dict[str, Any]:
+    def _order_to_dict(self, order: OrderState) -> dict[str, Any]:
         """Convert order to dictionary."""
         return {
             "order_id": order.order_id,
@@ -752,7 +757,7 @@ class SimBroker:
             "duration_seconds": order.duration_seconds
         }
 
-    def _position_to_dict(self, position: Position) -> Dict[str, Any]:
+    def _position_to_dict(self, position: Position) -> dict[str, Any]:
         """Convert position to dictionary."""
         return {
             "symbol": position.symbol,

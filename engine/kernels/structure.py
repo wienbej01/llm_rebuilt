@@ -5,16 +5,14 @@ Detects and updates market structure elements: swings, MSS, FVGs.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
+from typing import Any
 
 import numpy as np
-from numba import jit, float64, int64
+from numba import float64, int64, jit
 
-from engine.types import Bar, SwingPoint, SwingType, MSS, MSSDirection, FVG, FVGType
 from engine.state import MarketState
+from engine.types import FVG, MSS, Bar, FVGType, MSSDirection, SwingPoint, SwingType
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +31,7 @@ class StructureKernel:
         self.swing_lookback = swing_lookback
         self.fvg_threshold = fvg_threshold
 
-    def update_structure(self, market_state: MarketState, new_bars: List[Bar]) -> None:
+    def update_structure(self, market_state: MarketState, new_bars: list[Bar]) -> None:
         """
         Update market structure with new bars.
 
@@ -97,7 +95,7 @@ class StructureKernel:
                 )
                 market_state.add_swing_point(swing)
 
-    def _is_swing_high(self, bars: List[Bar], index: int) -> bool:
+    def _is_swing_high(self, bars: list[Bar], index: int) -> bool:
         """Check if bar at index is a swing high."""
         if index < 2 or index >= len(bars) - 2:
             return False
@@ -108,7 +106,7 @@ class StructureKernel:
 
         return left_higher and right_higher
 
-    def _is_swing_low(self, bars: List[Bar], index: int) -> bool:
+    def _is_swing_low(self, bars: list[Bar], index: int) -> bool:
         """Check if bar at index is a swing low."""
         if index < 2 or index >= len(bars) - 2:
             return False
@@ -119,7 +117,7 @@ class StructureKernel:
 
         return left_lower and right_lower
 
-    def _calculate_swing_strength(self, bars: List[Bar], index: int, swing_type: SwingType) -> int:
+    def _calculate_swing_strength(self, bars: list[Bar], index: int, swing_type: SwingType) -> int:
         """Calculate swing point strength (1-10)."""
         if swing_type == SwingType.SWING_HIGH:
             current_price = bars[index].high
@@ -253,7 +251,7 @@ class StructureKernel:
         # Staleness increases with time, max at 100 bars
         return min(1.0, bars_since_creation / 100.0)
 
-    def get_fvg_retest_info(self, market_state: MarketState, fvg: FVG) -> Dict[str, Any]:
+    def get_fvg_retest_info(self, market_state: MarketState, fvg: FVG) -> dict[str, Any]:
         """Get FVG retest information."""
         if not market_state.bars_5m:
             return {"has_retest": False, "retest_price": None, "retest_bar": None}
@@ -281,7 +279,7 @@ class StructureKernel:
 
         return {"has_retest": False, "retest_price": None, "retest_bar": None}
 
-    def get_structure_summary(self, market_state: MarketState) -> Dict[str, Any]:
+    def get_structure_summary(self, market_state: MarketState) -> dict[str, Any]:
         """Get summary of current market structure."""
         return {
             "swing_count": len(market_state.swing_points),

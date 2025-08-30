@@ -5,20 +5,21 @@ Main engine that processes market data and coordinates all components.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Callable
-import logging
 import json
-from dataclasses import dataclass, asdict
+import logging
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from typing import Any
 
-from engine.types import Bar, SetupProposal, Side, SetupType
-from engine.state import MarketState
 from engine.detectors.registry import detector_registry
-from engine.kernels.structure import StructureKernel
-from engine.kernels.quality import QualityKernel
-from engine.kernels.tcc_mcs import TCCMCSKernel
 from engine.kernels.micro_1m import Micro1mKernel
+from engine.kernels.quality import QualityKernel
 from engine.kernels.risk import RiskKernel
+from engine.kernels.structure import StructureKernel
+from engine.kernels.tcc_mcs import TCCMCSKernel
+from engine.state import MarketState
+from engine.types import Bar, SetupProposal, Side
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class EngineConfig:
     max_swings: int = 100
     max_mss: int = 50
     max_fvgs: int = 100
-    enable_detectors: List[str] = None
+    enable_detectors: list[str] = None
 
     def __post_init__(self):
         if self.enable_detectors is None:
@@ -43,7 +44,7 @@ class EngineConfig:
 class StrategyEngine:
     """Main strategy engine for PSE-LLM trading system."""
 
-    def __init__(self, config: Optional[EngineConfig] = None):
+    def __init__(self, config: EngineConfig | None = None):
         """
         Initialize strategy engine.
 
@@ -61,7 +62,7 @@ class StrategyEngine:
         self.risk_kernel = RiskKernel()
 
         # Hook system
-        self.hooks: Dict[str, List[Callable]] = {
+        self.hooks: dict[str, list[Callable]] = {
             "pre_analysis": [],
             "post_detection": [],
             "pre_llm": [],
@@ -118,8 +119,8 @@ class StrategyEngine:
     def process_5m_bar_with_1m_context(
         self,
         bar_5m: Bar,
-        bars_1m_window: List[Bar]
-    ) -> List[SetupProposal]:
+        bars_1m_window: list[Bar]
+    ) -> list[SetupProposal]:
         """
         Process a 5-minute bar with 1-minute context and return setup proposals.
 
@@ -130,7 +131,7 @@ class StrategyEngine:
         Returns:
             List of setup proposals
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             # Run pre-analysis hooks
@@ -185,7 +186,7 @@ class StrategyEngine:
             logger.error(f"Error processing 5m bar: {e}")
             return []
 
-    def _update_market_state(self, bar_5m: Bar, bars_1m_window: List[Bar]) -> None:
+    def _update_market_state(self, bar_5m: Bar, bars_1m_window: list[Bar]) -> None:
         """Update market state with new bars."""
         # Add 5m bar
         self.market_state.add_5m_bar(bar_5m)
@@ -219,7 +220,7 @@ class StrategyEngine:
         if len(self.market_state.fvgs) > self.config.max_fvgs:
             self.market_state.fvgs = self.market_state.fvgs[-self.config.max_fvgs:]
 
-    def _run_detectors(self, bars_1m_window: List[Bar]) -> List[SetupProposal]:
+    def _run_detectors(self, bars_1m_window: list[Bar]) -> list[SetupProposal]:
         """Run enabled detectors and return setup proposals."""
         setups = []
 
@@ -254,14 +255,14 @@ class StrategyEngine:
 
     def _update_processing_stats(self, start_time: datetime, setup_count: int) -> None:
         """Update processing statistics."""
-        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        processing_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         self.processing_stats["bars_processed"] += 1
         self.processing_stats["setups_generated"] += setup_count
         self.processing_stats["processing_time_ms"] += processing_time
-        self.processing_stats["last_processed"] = datetime.now(timezone.utc)
+        self.processing_stats["last_processed"] = datetime.now(UTC)
 
-    def get_processing_stats(self) -> Dict[str, Any]:
+    def get_processing_stats(self) -> dict[str, Any]:
         """Get processing statistics."""
         stats = self.processing_stats.copy()
 
@@ -272,7 +273,7 @@ class StrategyEngine:
 
         return stats
 
-    def get_market_state_snapshot(self) -> Dict[str, Any]:
+    def get_market_state_snapshot(self) -> dict[str, Any]:
         """Get current market state snapshot."""
         if not self.config.enable_state_snapshot:
             return {}
@@ -304,7 +305,7 @@ class StrategyEngine:
 
     def load_state(self, filepath: str) -> None:
         """Load engine state from file."""
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             state = json.load(f)
 
         # Load config
@@ -333,7 +334,7 @@ class StrategyEngine:
 
         logger.info("Reset engine state")
 
-    def get_engine_info(self) -> Dict[str, Any]:
+    def get_engine_info(self) -> dict[str, Any]:
         """Get engine information."""
         return {
             "config": asdict(self.config),
@@ -345,9 +346,9 @@ class StrategyEngine:
 
     def process_historical_bars(
         self,
-        bars_5m: List[Bar],
-        bars_1m: List[Bar]
-    ) -> List[SetupProposal]:
+        bars_5m: list[Bar],
+        bars_1m: list[Bar]
+    ) -> list[SetupProposal]:
         """
         Process historical bars and return all setup proposals.
 
@@ -419,7 +420,7 @@ class StrategyEngine:
 
         return True
 
-    def filter_setups_by_quality(self, setups: List[SetupProposal], min_confidence: float = 0.7) -> List[SetupProposal]:
+    def filter_setups_by_quality(self, setups: list[SetupProposal], min_confidence: float = 0.7) -> list[SetupProposal]:
         """
         Filter setups by quality.
 
@@ -432,7 +433,7 @@ class StrategyEngine:
         """
         return [setup for setup in setups if setup.confidence >= min_confidence]
 
-    def filter_setups_by_risk(self, setups: List[SetupProposal], max_risk_score: float = 5.0) -> List[SetupProposal]:
+    def filter_setups_by_risk(self, setups: list[SetupProposal], max_risk_score: float = 5.0) -> list[SetupProposal]:
         """
         Filter setups by risk.
 

@@ -5,15 +5,13 @@ Handles resampling, indicator calculations, and feature generation.
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional, Tuple
 import logging
-import math
+from datetime import UTC, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
-from numba import jit, float64, int64
+from numba import float64, int64, jit
 
 from engine.types import Bar
 
@@ -24,7 +22,7 @@ class DataTransforms:
     """Data transformation and feature engineering utilities."""
 
     @staticmethod
-    def resample_1m_to_5m(bars_1m: List[Bar]) -> List[Bar]:
+    def resample_1m_to_5m(bars_1m: list[Bar]) -> list[Bar]:
         """
         Resample 1-minute bars to 5-minute bars.
 
@@ -53,7 +51,7 @@ class DataTransforms:
         bars_5m = []
         for timestamp, row in df_5m.iterrows():
             bar = Bar(
-                timestamp=timestamp.to_pydatetime().replace(tzinfo=timezone.utc),
+                timestamp=timestamp.to_pydatetime().replace(tzinfo=UTC),
                 open=float(row['open']),
                 high=float(row['high']),
                 low=float(row['low']),
@@ -67,10 +65,10 @@ class DataTransforms:
 
     @staticmethod
     def create_1m_context_windows(
-        bars_5m: List[Bar],
-        bars_1m: List[Bar],
+        bars_5m: list[Bar],
+        bars_1m: list[Bar],
         context_window: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Create sliding 1-minute context windows for each 5-minute bar.
 
@@ -112,7 +110,7 @@ class DataTransforms:
         return context_windows
 
     @staticmethod
-    def calculate_indicators(bars: List[Bar]) -> Dict[str, List[float]]:
+    def calculate_indicators(bars: list[Bar]) -> dict[str, list[float]]:
         """
         Calculate technical indicators for bars.
 
@@ -153,10 +151,10 @@ class DataTransforms:
 
     @staticmethod
     def join_1m_context_to_5m(
-        bars_5m: List[Bar],
-        bars_1m: List[Bar],
+        bars_5m: list[Bar],
+        bars_1m: list[Bar],
         context_window: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Join 1-minute context windows to 5-minute bars.
 
@@ -171,7 +169,7 @@ class DataTransforms:
         return DataTransforms.create_1m_context_windows(bars_5m, bars_1m, context_window)
 
     @staticmethod
-    def _bars_to_dataframe(bars: List[Bar]) -> pd.DataFrame:
+    def _bars_to_dataframe(bars: list[Bar]) -> pd.DataFrame:
         """Convert list of Bar objects to pandas DataFrame."""
         data = {
             'timestamp': [bar.timestamp for bar in bars],
@@ -190,7 +188,7 @@ class DataTransforms:
     def _row_to_bar(row: pd.Series) -> Bar:
         """Convert DataFrame row to Bar object."""
         return Bar(
-            timestamp=row.name.to_pydatetime().replace(tzinfo=timezone.utc),
+            timestamp=row.name.to_pydatetime().replace(tzinfo=UTC),
             open=float(row['open']),
             high=float(row['high']),
             low=float(row['low']),
@@ -199,7 +197,7 @@ class DataTransforms:
         )
 
     @staticmethod
-    def _calculate_atr(df: pd.DataFrame, period: int = 14) -> List[float]:
+    def _calculate_atr(df: pd.DataFrame, period: int = 14) -> list[float]:
         """Calculate Average True Range."""
         high = df['high']
         low = df['low']
@@ -215,32 +213,32 @@ class DataTransforms:
         return atr.fillna(0).tolist()
 
     @staticmethod
-    def _calculate_vwap(df: pd.DataFrame) -> List[float]:
+    def _calculate_vwap(df: pd.DataFrame) -> list[float]:
         """Calculate Volume Weighted Average Price."""
         typical_price = (df['high'] + df['low'] + df['close']) / 3
         vwap = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
         return vwap.fillna(0).tolist()
 
     @staticmethod
-    def _calculate_price_zscore(df: pd.DataFrame, window: int = 20) -> List[float]:
+    def _calculate_price_zscore(df: pd.DataFrame, window: int = 20) -> list[float]:
         """Calculate price z-score over rolling window."""
         zscore = (df['close'] - df['close'].rolling(window=window).mean()) / df['close'].rolling(window=window).std()
         return zscore.fillna(0).tolist()
 
     @staticmethod
-    def _calculate_volume_sma(df: pd.DataFrame, period: int = 20) -> List[float]:
+    def _calculate_volume_sma(df: pd.DataFrame, period: int = 20) -> list[float]:
         """Calculate volume simple moving average."""
         sma = df['volume'].rolling(window=period).mean()
         return sma.fillna(0).tolist()
 
     @staticmethod
-    def _calculate_volume_zscore(df: pd.DataFrame, window: int = 20) -> List[float]:
+    def _calculate_volume_zscore(df: pd.DataFrame, window: int = 20) -> list[float]:
         """Calculate volume z-score over rolling window."""
         zscore = (df['volume'] - df['volume'].rolling(window=window).mean()) / df['volume'].rolling(window=window).std()
         return zscore.fillna(0).tolist()
 
     @staticmethod
-    def _calculate_pdh(df: pd.DataFrame) -> List[float]:
+    def _calculate_pdh(df: pd.DataFrame) -> list[float]:
         """Calculate Previous Day High."""
         # Group by date and calculate previous day high
         daily_high = df.groupby(df.index.date)['high'].max()
@@ -248,14 +246,14 @@ class DataTransforms:
         return pdh.reindex(df.index).fillna(0).tolist()
 
     @staticmethod
-    def _calculate_pdl(df: pd.DataFrame) -> List[float]:
+    def _calculate_pdl(df: pd.DataFrame) -> list[float]:
         """Calculate Previous Day Low."""
         daily_low = df.groupby(df.index.date)['low'].min()
         pdl = daily_low.shift(1).reindex(df.index.date).fillna(method='ffill')
         return pdl.reindex(df.index).fillna(0).tolist()
 
     @staticmethod
-    def _calculate_onh(df: pd.DataFrame) -> List[float]:
+    def _calculate_onh(df: pd.DataFrame) -> list[float]:
         """Calculate Overnight High (ETH session)."""
         # This is a simplified implementation
         # In practice, you'd need to know ETH session times
@@ -263,13 +261,13 @@ class DataTransforms:
         return onh.tolist()
 
     @staticmethod
-    def _calculate_onl(df: pd.DataFrame) -> List[float]:
+    def _calculate_onl(df: pd.DataFrame) -> list[float]:
         """Calculate Overnight Low (ETH session)."""
         onl = df['low'].rolling(window=24, min_periods=1).min()  # 24 hours
         return onl.tolist()
 
     @staticmethod
-    def _calculate_rolling_volatility(df: pd.DataFrame, window: int = 20) -> List[float]:
+    def _calculate_rolling_volatility(df: pd.DataFrame, window: int = 20) -> list[float]:
         """Calculate rolling volatility (standard deviation of returns)."""
         returns = df['close'].pct_change()
         volatility = returns.rolling(window=window).std() * np.sqrt(252)  # Annualized
@@ -280,7 +278,7 @@ class FeatureEngineer:
     """Advanced feature engineering for trading signals."""
 
     @staticmethod
-    def create_temporal_features(bars: List[Bar]) -> Dict[str, List[float]]:
+    def create_temporal_features(bars: list[Bar]) -> dict[str, list[float]]:
         """Create time-based features."""
         if not bars:
             return {}
@@ -297,7 +295,7 @@ class FeatureEngineer:
         return features
 
     @staticmethod
-    def create_microstructure_features(bars: List[Bar]) -> Dict[str, List[float]]:
+    def create_microstructure_features(bars: list[Bar]) -> dict[str, list[float]]:
         """Create market microstructure features."""
         if not bars:
             return {}
@@ -320,7 +318,7 @@ class FeatureEngineer:
         return features
 
     @staticmethod
-    def create_smc_features(bars: List[Bar]) -> Dict[str, List[float]]:
+    def create_smc_features(bars: list[Bar]) -> dict[str, list[float]]:
         """Create Smart Money Concepts specific features."""
         if not bars:
             return {}

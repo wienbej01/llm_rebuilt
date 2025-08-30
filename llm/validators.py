@@ -6,19 +6,22 @@ Strict schema checks and validation utilities.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Union
 import logging
 import re
+from typing import Any
 
-from pydantic import ValidationError, BaseModel
+from pydantic import BaseModel, ValidationError
 
-from llm.schemas import (
-    LLMInput, LLMOutput, Validation, RiskDecision, RiskFlags,
-    SetupEdit, MarketContext, RiskPolicy, LLMTask, OrderIntent,
-    RiskInput, RiskContext, ObservedFeatures, HolisticInput
-)
 from llm.gateway import LLMResponse
+from llm.schemas import (
+    HolisticInput,
+    LLMInput,
+    LLMOutput,
+    LLMTask,
+    ObservedFeatures,
+    OrderIntent,
+    RiskInput,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,7 @@ class LLMValidator:
             "validation_errors": []
         }
 
-    def validate_input(self, data: Dict[str, Any], task: LLMTask) -> LLMInput:
+    def validate_input(self, data: dict[str, Any], task: LLMTask) -> LLMInput:
         """
         Validate LLM input data.
 
@@ -83,7 +86,7 @@ class LLMValidator:
             self.validation_stats["validation_errors"].append(str(e))
             raise LLMValidationError(f"Input validation failed: {e}")
 
-    def validate_output(self, data: Dict[str, Any], task: LLMTask) -> LLMOutput:
+    def validate_output(self, data: dict[str, Any], task: LLMTask) -> LLMOutput:
         """
         Validate LLM output data.
 
@@ -123,7 +126,7 @@ class LLMValidator:
             self.validation_stats["validation_errors"].append(str(e))
             raise LLMValidationError(f"Output validation failed: {e}")
 
-    def validate_risk_input(self, data: Dict[str, Any]) -> RiskInput:
+    def validate_risk_input(self, data: dict[str, Any]) -> RiskInput:
         """
         Validate risk assessment input data.
 
@@ -159,7 +162,7 @@ class LLMValidator:
             self.validation_stats["validation_errors"].append(str(e))
             raise LLMValidationError(f"Risk input validation failed: {e}")
 
-    def validate_holistic_input(self, data: Dict[str, Any]) -> HolisticInput:
+    def validate_holistic_input(self, data: dict[str, Any]) -> HolisticInput:
         """
         Validate holistic proposal input data.
 
@@ -195,7 +198,7 @@ class LLMValidator:
             self.validation_stats["validation_errors"].append(str(e))
             raise LLMValidationError(f"Holistic input validation failed: {e}")
 
-    def validate_llm_response(self, response: LLMResponse) -> Dict[str, Any]:
+    def validate_llm_response(self, response: LLMResponse) -> dict[str, Any]:
         """
         Validate and parse LLM response.
 
@@ -229,7 +232,7 @@ class LLMValidator:
             self.validation_stats["validation_errors"].append(str(e))
             raise LLMValidationError(f"Response validation failed: {e}")
 
-    def _check_required_fields(self, data: Dict[str, Any], task: LLMTask) -> None:
+    def _check_required_fields(self, data: dict[str, Any], task: LLMTask) -> None:
         """Check required fields for input data."""
         required_fields = ["session", "market_context", "setups", "risk_policy", "ask"]
 
@@ -241,7 +244,7 @@ class LLMValidator:
         if task == LLMTask.VALIDATE_AND_RANK and not data.get("setups"):
             raise ValueError("validate_and_rank task requires setups")
 
-    def _validate_data_types(self, data: Dict[str, Any], task: LLMTask) -> None:
+    def _validate_data_types(self, data: dict[str, Any], task: LLMTask) -> None:
         """Validate data types for input data."""
         # Validate market context
         market_context = data.get("market_context", {})
@@ -283,7 +286,7 @@ class LLMValidator:
             if llm_input.setups:
                 raise ValueError("risk_veto_or_scale task should not include setups")
 
-    def _check_json_structure(self, data: Dict[str, Any]) -> None:
+    def _check_json_structure(self, data: dict[str, Any]) -> None:
         """Check basic JSON structure."""
         if not isinstance(data, dict):
             raise ValueError("Response must be a JSON object")
@@ -294,7 +297,7 @@ class LLMValidator:
             if key not in valid_keys:
                 raise ValueError(f"Invalid key in response: {key}")
 
-    def _validate_output_data_types(self, data: Dict[str, Any], task: LLMTask) -> None:
+    def _validate_output_data_types(self, data: dict[str, Any], task: LLMTask) -> None:
         """Validate data types for output data."""
         # Validate validations
         validations = data.get("validations", [])
@@ -365,7 +368,7 @@ class LLMValidator:
             if len(decision.reason) > 120:
                 raise ValueError("risk decision reason must be ≤120 characters")
 
-    def _validate_order_constraints(self, orders: List[OrderIntent]) -> None:
+    def _validate_order_constraints(self, orders: list[OrderIntent]) -> None:
         """Validate order constraints."""
         for order in orders:
             if order.quantity <= 0:
@@ -391,7 +394,7 @@ class LLMValidator:
         if features.retracement < 0:
             raise ValueError("retracement must be non-negative")
 
-    def _extract_json_from_response(self, content: str) -> Dict[str, Any]:
+    def _extract_json_from_response(self, content: str) -> dict[str, Any]:
         """Extract JSON from LLM response content."""
         # Remove markdown code blocks if present
         content = content.strip()
@@ -418,7 +421,7 @@ class LLMValidator:
 
             raise LLMValidationError("No valid JSON found in response")
 
-    def get_validation_stats(self) -> Dict[str, Any]:
+    def get_validation_stats(self) -> dict[str, Any]:
         """Get validation statistics."""
         stats = self.validation_stats.copy()
 
@@ -444,7 +447,7 @@ class SchemaValidator:
     """Schema validator for Pydantic models."""
 
     @staticmethod
-    def validate_model(data: Dict[str, Any], model_class: type[BaseModel]) -> BaseModel:
+    def validate_model(data: dict[str, Any], model_class: type[BaseModel]) -> BaseModel:
         """
         Validate data against Pydantic model.
 
@@ -464,7 +467,7 @@ class SchemaValidator:
             raise LLMValidationError(f"Schema validation failed: {e}")
 
     @staticmethod
-    def validate_list(data: List[Dict[str, Any]], model_class: type[BaseModel]) -> List[BaseModel]:
+    def validate_list(data: list[dict[str, Any]], model_class: type[BaseModel]) -> list[BaseModel]:
         """
         Validate list of data against Pydantic model.
 

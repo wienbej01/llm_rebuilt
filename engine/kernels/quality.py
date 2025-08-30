@@ -5,16 +5,15 @@ Implements Market Quality Score (MQS) and Fair Value Gap Score (FRS) assessment.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Tuple
-from enum import Enum
 import logging
+from enum import Enum
+from typing import Any
 
 import numpy as np
-from numba import jit, float64, int64
+from numba import float64, int64, jit
 
-from engine.types import Bar, SwingPoint, MSS, FVG, SetupProposal
 from engine.state import MarketState
+from engine.types import FVG, SetupProposal
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ class QualityKernel:
         self.max_fvg_staleness = max_fvg_staleness
         self.volume_threshold = volume_threshold
 
-    def assess_setup_quality(self, setup: SetupProposal, market_state: MarketState) -> Dict[str, Any]:
+    def assess_setup_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """
         Assess overall quality of a setup proposal.
 
@@ -364,7 +363,7 @@ class QualityKernel:
         # For now, return True
         return True
 
-    def _assess_swing_quality(self, setup: SetupProposal, market_state: MarketState) -> Dict[str, Any]:
+    def _assess_swing_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """Assess swing quality for the setup."""
         if not setup.swing_points:
             return {"score": 0.0, "details": "No swing points"}
@@ -379,7 +378,7 @@ class QualityKernel:
             "total_count": len(setup.swing_points)
         }
 
-    def _assess_structure_quality(self, setup: SetupProposal, market_state: MarketState) -> Dict[str, Any]:
+    def _assess_structure_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """Assess structure quality for the setup."""
         mss_count = len(setup.mss_list)
         valid_mss = [mss for mss in setup.mss_list if mss.is_valid]
@@ -390,7 +389,7 @@ class QualityKernel:
             "valid_mss_count": len(valid_mss)
         }
 
-    def _assess_volume_quality(self, setup: SetupProposal, market_state: MarketState) -> Dict[str, Any]:
+    def _assess_volume_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """Assess volume quality for the setup."""
         # This would need volume analysis from setup.evidence
         return {
@@ -398,7 +397,7 @@ class QualityKernel:
             "details": "Volume analysis not implemented"
         }
 
-    def _assess_fvg_quality(self, setup: SetupProposal, market_state: MarketState) -> Dict[str, Any]:
+    def _assess_fvg_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """Assess FVG quality for the setup."""
         if not setup.fvgs:
             return {"score": 0.0, "details": "No FVGs"}

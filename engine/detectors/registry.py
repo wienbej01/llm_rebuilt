@@ -5,12 +5,12 @@ Manages and coordinates all trade setup detectors.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Callable, Type
 import logging
+from collections.abc import Callable
+from typing import Any
 
-from engine.types import SetupProposal, Bar
 from engine.state import MarketState
+from engine.types import Bar, SetupProposal
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +20,15 @@ class DetectorRegistry:
 
     def __init__(self):
         """Initialize detector registry."""
-        self._detectors: Dict[str, Callable] = {}
-        self._detector_configs: Dict[str, Dict[str, Any]] = {}
-        self._enabled_detectors: Dict[str, bool] = {}
+        self._detectors: dict[str, Callable] = {}
+        self._detector_configs: dict[str, dict[str, Any]] = {}
+        self._enabled_detectors: dict[str, bool] = {}
 
     def register_detector(
         self,
         name: str,
         detector_func: Callable,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         enabled: bool = True
     ) -> None:
         """
@@ -59,7 +59,7 @@ class DetectorRegistry:
             del self._enabled_detectors[name]
             logger.info(f"Unregistered detector: {name}")
 
-    def get_detector(self, name: str) -> Optional[Callable]:
+    def get_detector(self, name: str) -> Callable | None:
         """
         Get a detector function by name.
 
@@ -71,7 +71,7 @@ class DetectorRegistry:
         """
         return self._detectors.get(name)
 
-    def get_detector_config(self, name: str) -> Dict[str, Any]:
+    def get_detector_config(self, name: str) -> dict[str, Any]:
         """
         Get configuration for a detector.
 
@@ -117,7 +117,7 @@ class DetectorRegistry:
             self._enabled_detectors[name] = False
             logger.info(f"Disabled detector: {name}")
 
-    def list_detectors(self) -> List[str]:
+    def list_detectors(self) -> list[str]:
         """
         Get list of all registered detector names.
 
@@ -126,7 +126,7 @@ class DetectorRegistry:
         """
         return list(self._detectors.keys())
 
-    def list_enabled_detectors(self) -> List[str]:
+    def list_enabled_detectors(self) -> list[str]:
         """
         Get list of enabled detector names.
 
@@ -135,7 +135,7 @@ class DetectorRegistry:
         """
         return [name for name, enabled in self._enabled_detectors.items() if enabled]
 
-    def update_detector_config(self, name: str, config: Dict[str, Any]) -> None:
+    def update_detector_config(self, name: str, config: dict[str, Any]) -> None:
         """
         Update configuration for a detector.
 
@@ -150,8 +150,8 @@ class DetectorRegistry:
     def run_all_detectors(
         self,
         market_state: MarketState,
-        bars_1m_window: List[Bar]
-    ) -> List[SetupProposal]:
+        bars_1m_window: list[Bar]
+    ) -> list[SetupProposal]:
         """
         Run all enabled detectors and return setup proposals.
 
@@ -184,8 +184,8 @@ class DetectorRegistry:
         self,
         detector_name: str,
         market_state: MarketState,
-        bars_1m_window: List[Bar]
-    ) -> List[SetupProposal]:
+        bars_1m_window: list[Bar]
+    ) -> list[SetupProposal]:
         """
         Run a specific detector.
 
@@ -217,7 +217,7 @@ class DetectorRegistry:
             logger.error(f"Error running detector {detector_name}: {e}")
             return []
 
-    def get_detector_stats(self) -> Dict[str, Any]:
+    def get_detector_stats(self) -> dict[str, Any]:
         """
         Get statistics about detectors.
 
@@ -232,7 +232,7 @@ class DetectorRegistry:
             "enabled_detector_names": self.list_enabled_detectors()
         }
 
-    def load_config_from_dict(self, config_dict: Dict[str, Any]) -> None:
+    def load_config_from_dict(self, config_dict: dict[str, Any]) -> None:
         """
         Load detector configuration from dictionary.
 
@@ -252,7 +252,7 @@ class DetectorRegistry:
 
         logger.info("Loaded detector configuration from dictionary")
 
-    def export_config_to_dict(self) -> Dict[str, Any]:
+    def export_config_to_dict(self) -> dict[str, Any]:
         """
         Export detector configuration to dictionary.
 
@@ -285,7 +285,7 @@ def get_detector_registry() -> DetectorRegistry:
 
 
 # Decorator for registering detectors
-def register_detector(name: str, config: Optional[Dict[str, Any]] = None, enabled: bool = True):
+def register_detector(name: str, config: dict[str, Any] | None = None, enabled: bool = True):
     """
     Decorator for registering detector functions.
 

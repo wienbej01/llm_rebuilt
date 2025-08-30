@@ -5,13 +5,12 @@ Detects MSS + FVG POI Retest setups.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 import logging
+from typing import Any
 
-from engine.types import SetupProposal, Bar, Side, SetupType, SwingPoint, MSS, FVG
-from engine.state import MarketState
 from engine.detectors.registry import register_detector
+from engine.state import MarketState
+from engine.types import FVG, MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +30,9 @@ logger = logging.getLogger(__name__)
 )
 def detect_das21_setups(
     market_state: MarketState,
-    bars_1m_window: List[Bar],
-    config: Dict[str, Any]
-) -> List[SetupProposal]:
+    bars_1m_window: list[Bar],
+    config: dict[str, Any]
+) -> list[SetupProposal]:
     """
     Detect DAS 2.1 setups: MSS + FVG POI Retest.
 
@@ -207,7 +206,7 @@ def _check_fvg_retest(
     fvg: FVG,
     market_state: MarketState,
     tolerance: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check if FVG has been retested and return retest info."""
     if not market_state.bars_5m:
         return {"has_retest": False, "retest_price": None, "strength": 0.0}
@@ -263,11 +262,11 @@ def _determine_setup_direction(mss: MSS, fvg: FVG) -> Side:
 
 
 def _get_relevant_swings(
-    swings: List[SwingPoint],
+    swings: list[SwingPoint],
     mss: MSS,
     fvg: FVG,
     min_strength: int
-) -> List[SwingPoint]:
+) -> list[SwingPoint]:
     """Get relevant swing points for the setup."""
     relevant = []
 

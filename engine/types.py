@@ -5,14 +5,14 @@ All models use Pydantic v2 with strict typing and deterministic JSON serializati
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import List, Optional, Dict, Any, Union
+from typing import Any
 from uuid import UUID, uuid4
-import json
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Side(str, Enum):
@@ -82,16 +82,20 @@ class Bar(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
+    symbol: str = Field(..., description="Trading symbol")
+    timeframe: str = Field(..., description="Bar timeframe (e.g., '1m', '5m')")
+    session: str = Field(..., description="Trading session (e.g., 'RTH', 'ETH')")
+    venue: str | None = Field(None, description="Data source or venue")
     timestamp: datetime = Field(..., description="Bar timestamp in UTC")
     open: Decimal = Field(..., ge=0, description="Open price")
     high: Decimal = Field(..., ge=0, description="High price")
     low: Decimal = Field(..., ge=0, description="Low price")
     close: Decimal = Field(..., ge=0, description="Close price")
     volume: int = Field(..., ge=0, description="Volume")
-    
+
     @model_validator(mode='after')
-    def validate_prices(self) -> 'Bar':
+    def validate_prices(self) -> Bar:
         """Ensure price relationships are valid."""
         if self.high < max(self.open, self.close, self.low):
             raise ValueError(f"High must be >= max(open, close, low), got {self.high} < {max(self.open, self.close, self.low)}")
@@ -108,7 +112,7 @@ class SwingPoint(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     bar_index: int = Field(..., ge=0, description="Index of the bar in the sequence")
     timestamp: datetime = Field(..., description="Timestamp of the swing point")
     price: Decimal = Field(..., gt=0, description="Price level of the swing")
@@ -124,16 +128,16 @@ class MSS(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     start_bar: int = Field(..., ge=0, description="Starting bar index")
     end_bar: int = Field(..., ge=0, description="Ending bar index")
     direction: MSSDirection = Field(..., description="Direction of the shift")
     break_price: Decimal = Field(..., gt=0, description="Price level where structure broke")
     confirmation_price: Decimal = Field(..., gt=0, description="Price confirming the shift")
     is_valid: bool = Field(True, description="Whether this MSS is still valid")
-    
+
     @model_validator(mode='after')
-    def validate_bar_order(self) -> 'MSS':
+    def validate_bar_order(self) -> MSS:
         """Ensure start_bar <= end_bar."""
         if self.start_bar > self.end_bar:
             raise ValueError(f"start_bar ({self.start_bar}) must be <= end_bar ({self.end_bar})")
@@ -148,24 +152,24 @@ class FVG(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     start_bar: int = Field(..., ge=0, description="Starting bar index")
     end_bar: int = Field(..., ge=0, description="Ending bar index")
     fvg_type: FVGType = Field(..., description="Type of FVG")
     top: Decimal = Field(..., gt=0, description="Top boundary of FVG")
     bottom: Decimal = Field(..., gt=0, description="Bottom boundary of FVG")
     is_filled: bool = Field(False, description="Whether FVG has been filled")
-    fill_bar: Optional[int] = Field(None, ge=0, description="Bar index when filled")
-    
+    fill_bar: int | None = Field(None, ge=0, description="Bar index when filled")
+
     @model_validator(mode='after')
-    def validate_boundaries(self) -> 'FVG':
+    def validate_boundaries(self) -> FVG:
         """Ensure top > bottom."""
         if self.top <= self.bottom:
             raise ValueError(f"top ({self.top}) must be > bottom ({self.bottom})")
         return self
-    
+
     @model_validator(mode='after')
-    def validate_bar_order(self) -> 'FVG':
+    def validate_bar_order(self) -> FVG:
         """Ensure start_bar <= end_bar."""
         if self.start_bar > self.end_bar:
             raise ValueError(f"start_bar ({self.start_bar}) must be <= end_bar ({self.end_bar})")
@@ -180,18 +184,18 @@ class TCC(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     start_time: datetime = Field(..., description="Cycle start time")
     end_time: datetime = Field(..., description="Cycle end time")
     cycle_length: int = Field(..., gt=0, description="Length of cycle in bars")
     cycle_type: str = Field(..., description="Type of cycle (e.g., 'impulse', 'corrective')")
     strength: int = Field(..., ge=1, le=10, description="Cycle strength (1-10)")
-    
+
     @model_validator(mode='after')
-    def validate_time_order(self) -> 'TCC':
+    def validate_time_order(self) -> TCC:
         """Ensure start_time <= end_time."""
         if self.start_time > self.end_time:
-            raise ValueError(f"start_time must be <= end_time")
+            raise ValueError("start_time must be <= end_time")
         return self
 
 
@@ -203,11 +207,11 @@ class MCS(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     timeframe: str = Field(..., description="Higher timeframe")
     structure_type: str = Field(..., description="Type of structure (e.g., 'uptrend', 'downtrend', 'range')")
     bias: str = Field(..., description="Market bias (bullish, bearish, neutral)")
-    key_levels: List[Decimal] = Field(..., description="Key support/resistance levels")
+    key_levels: list[Decimal] = Field(..., description="Key support/resistance levels")
     last_updated: datetime = Field(..., description="Last update time")
 
 
@@ -219,7 +223,7 @@ class SetupProposal(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
     symbol: str = Field(..., description="Trading symbol")
     setup_type: SetupType = Field(..., description="Type of setup")
@@ -229,21 +233,21 @@ class SetupProposal(BaseModel):
     take_profit: Decimal = Field(..., gt=0, description="Take profit price")
     risk_reward_ratio: Decimal = Field(..., gt=0, description="Risk:Reward ratio")
     confidence: Decimal = Field(..., ge=0, le=1, description="Confidence score (0-1)")
-    
+
     # Evidence fields
-    swing_points: List[SwingPoint] = Field(..., description="Relevant swing points")
-    mss_list: List[MSS] = Field(..., description="Market structure shifts")
-    fvgs: List[FVG] = Field(..., description="Fair value gaps")
-    tcc_context: Optional[TCC] = Field(None, description="Time cycle context")
-    mcs_context: Optional[MCS] = Field(None, description="Market cycle structure")
-    
+    swing_points: list[SwingPoint] = Field(..., description="Relevant swing points")
+    mss_list: list[MSS] = Field(..., description="Market structure shifts")
+    fvgs: list[FVG] = Field(..., description="Fair value gaps")
+    tcc_context: TCC | None = Field(None, description="Time cycle context")
+    mcs_context: MCS | None = Field(None, description="Market cycle structure")
+
     # Additional evidence
-    volume_analysis: Dict[str, Any] = Field(..., description="Volume-based evidence")
-    order_flow: Dict[str, Any] = Field(..., description="Order flow evidence")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    
+    volume_analysis: dict[str, Any] = Field(..., description="Volume-based evidence")
+    order_flow: dict[str, Any] = Field(..., description="Order flow evidence")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
     @model_validator(mode='after')
-    def validate_prices(self) -> 'SetupProposal':
+    def validate_prices(self) -> SetupProposal:
         """Validate price relationships."""
         if self.side == Side.BUY:
             if self.entry_price <= self.stop_loss:
@@ -266,18 +270,18 @@ class OrderIntent(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
     symbol: str = Field(..., description="Trading symbol")
     side: Side = Field(..., description="Order side")
     order_type: OrderType = Field(..., description="Order type")
     quantity: int = Field(..., gt=0, description="Order quantity")
-    price: Optional[Decimal] = Field(None, gt=0, description="Order price (for limit/stop orders)")
-    stop_price: Optional[Decimal] = Field(None, gt=0, description="Stop price (for stop orders)")
+    price: Decimal | None = Field(None, gt=0, description="Order price (for limit/stop orders)")
+    stop_price: Decimal | None = Field(None, gt=0, description="Stop price (for stop orders)")
     time_in_force: TimeInForce = Field(TimeInForce.DAY, description="Time in force")
     outside_rth: bool = Field(False, description="Allow trading outside regular hours")
     setup_id: UUID = Field(..., description="Associated setup proposal ID")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ExecutionReport(BaseModel):
@@ -288,7 +292,7 @@ class ExecutionReport(BaseModel):
         validate_assignment=True,
         use_enum_values=True
     )
-    
+
     id: UUID = Field(default_factory=uuid4, description="Unique identifier")
     order_id: UUID = Field(..., description="Original order ID")
     symbol: str = Field(..., description="Trading symbol")
@@ -296,9 +300,9 @@ class ExecutionReport(BaseModel):
     quantity: int = Field(..., gt=0, description="Filled quantity")
     price: Decimal = Field(..., gt=0, description="Fill price")
     commission: Decimal = Field(default=Decimal('0'), ge=0, description="Commission")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     status: OrderStatus = Field(OrderStatus.FILLED, description="Execution status")
-    
+
     @field_validator('commission')
     @classmethod
     def validate_commission(cls, v: Decimal) -> Decimal:

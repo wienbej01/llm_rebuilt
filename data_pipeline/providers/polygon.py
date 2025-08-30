@@ -5,14 +5,19 @@ Polygon provides comprehensive financial market data with REST and WebSocket API
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, date, timezone
-from typing import List, Dict, Any, Optional
-import json
 import logging
+from datetime import UTC, date, datetime
+from typing import Any
 
-from .base import HistoricalDataProvider, ConnectionError, AuthenticationError, DataNotAvailableError, RateLimitError
 from engine.types import Bar
+
+from .base import (
+    AuthenticationError,
+    ConnectionError,
+    DataNotAvailableError,
+    HistoricalDataProvider,
+    RateLimitError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +81,7 @@ class PolygonProvider(HistoricalDataProvider):
         start_date: date,
         end_date: date,
         **kwargs: Any
-    ) -> List[Bar]:
+    ) -> list[Bar]:
         """
         Retrieve historical bar data from Polygon.
 
@@ -165,12 +170,12 @@ class PolygonProvider(HistoricalDataProvider):
         }
         return conversion_map.get(timeframe, (1, "minute"))
 
-    def _parse_polygon_record(self, record: Dict[str, Any], symbol: str) -> Optional[Bar]:
+    def _parse_polygon_record(self, record: dict[str, Any], symbol: str) -> Bar | None:
         """Parse a Polygon record into a Bar object."""
         try:
             # Polygon uses Unix milliseconds
             timestamp_ms = record.get("t", 0)
-            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc)
+            timestamp = datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
 
             # Extract OHLCV data
             open_price = float(record.get("o", 0))
@@ -192,7 +197,7 @@ class PolygonProvider(HistoricalDataProvider):
             logger.warning(f"Failed to parse Polygon record: {str(e)}")
             return None
 
-    async def get_available_symbols(self) -> List[str]:
+    async def get_available_symbols(self) -> list[str]:
         """Get list of available symbols from Polygon."""
         if not self.connected:
             raise ConnectionError("Not connected to Polygon")
@@ -206,7 +211,7 @@ class PolygonProvider(HistoricalDataProvider):
             logger.error(f"Error retrieving symbols from Polygon: {str(e)}")
             return []
 
-    async def get_symbol_info(self, symbol: str) -> Dict[str, Any]:
+    async def get_symbol_info(self, symbol: str) -> dict[str, Any]:
         """Get detailed information about a symbol."""
         if not self.connected:
             raise ConnectionError("Not connected to Polygon")
@@ -232,7 +237,7 @@ class PolygonProvider(HistoricalDataProvider):
         except Exception:
             return False
 
-    def get_supported_timeframes(self) -> List[str]:
+    def get_supported_timeframes(self) -> list[str]:
         """Get list of supported timeframes."""
         return ["1m", "5m", "15m", "1h", "1d"]
 
@@ -240,7 +245,7 @@ class PolygonProvider(HistoricalDataProvider):
         """Get maximum lookback period in days."""
         return 365 * 2  # 2 years for free tier, more for paid tiers
 
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> dict[str, Any]:
         """Get provider capabilities."""
         base_capabilities = super().get_capabilities()
         base_capabilities.update({

@@ -5,14 +5,14 @@ Pydantic models for LLM input/output validation.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional, Union
-from enum import Enum
 import uuid
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from engine.types import SetupProposal, Side, SetupType
+from engine.types import SetupProposal, Side
 
 
 class LLMTask(str, Enum):
@@ -56,9 +56,9 @@ class RiskFlags(BaseModel):
 
 class SetupEdit(BaseModel):
     """Setup edit suggestions."""
-    entry: Optional[float] = Field(None, description="Entry price edit")
-    sl: Optional[float] = Field(None, description="Stop loss edit")
-    tp1: Optional[float] = Field(None, description="Take profit 1 edit")
+    entry: float | None = Field(None, description="Entry price edit")
+    sl: float | None = Field(None, description="Stop loss edit")
+    tp1: float | None = Field(None, description="Take profit 1 edit")
 
     model_config = ConfigDict(frozen=True)
 
@@ -98,7 +98,7 @@ class LLMInput(BaseModel):
     """LLM input schema."""
     session: str = Field(..., description="Session identifier")
     market_context: MarketContext = Field(..., description="Market context")
-    setups: List[SetupProposal] = Field(..., description="Setup proposals")
+    setups: list[SetupProposal] = Field(..., description="Setup proposals")
     risk_policy: RiskPolicy = Field(..., description="Risk policy")
     ask: LLMTask = Field(..., description="LLM task")
 
@@ -106,7 +106,7 @@ class LLMInput(BaseModel):
 
     @field_validator('setups')
     @classmethod
-    def validate_setups(cls, v: List[SetupProposal]) -> List[SetupProposal]:
+    def validate_setups(cls, v: list[SetupProposal]) -> list[SetupProposal]:
         """Validate setup proposals."""
         if len(v) > 10:
             raise ValueError("Maximum 10 setups allowed")
@@ -115,14 +115,14 @@ class LLMInput(BaseModel):
 
 class LLMOutput(BaseModel):
     """LLM output schema."""
-    validations: List[Validation] = Field(default_factory=list, description="Setup validations")
-    holistic_proposals: List[SetupProposal] = Field(default_factory=list, description="Holistic proposals")
-    risk_decisions: List[RiskDecision] = Field(default_factory=list, description="Risk decisions")
+    validations: list[Validation] = Field(default_factory=list, description="Setup validations")
+    holistic_proposals: list[SetupProposal] = Field(default_factory=list, description="Holistic proposals")
+    risk_decisions: list[RiskDecision] = Field(default_factory=list, description="Risk decisions")
 
     model_config = ConfigDict(frozen=True)
 
     @model_validator(mode='after')
-    def validate_output_consistency(self) -> 'LLMOutput':
+    def validate_output_consistency(self) -> LLMOutput:
         """Validate output consistency."""
         # For validate_and_rank, only validations should be present
         if self.validations and (self.holistic_proposals or self.risk_decisions):
@@ -165,14 +165,14 @@ class RiskContext(BaseModel):
 class RiskInput(BaseModel):
     """Risk assessment input schema."""
     risk_policy: RiskPolicy = Field(..., description="Risk policy")
-    candidate_orders: List[OrderIntent] = Field(..., description="Candidate orders")
+    candidate_orders: list[OrderIntent] = Field(..., description="Candidate orders")
     context: RiskContext = Field(..., description="Risk context")
 
     model_config = ConfigDict(frozen=True)
 
     @field_validator('candidate_orders')
     @classmethod
-    def validate_orders(cls, v: List[OrderIntent]) -> List[OrderIntent]:
+    def validate_orders(cls, v: list[OrderIntent]) -> list[OrderIntent]:
         """Validate candidate orders."""
         if len(v) > 10:
             raise ValueError("Maximum 10 orders allowed")
@@ -183,8 +183,8 @@ class ObservedFeatures(BaseModel):
     """Observed market features for holistic proposals."""
     mqs: float = Field(..., ge=0, le=10, description="Market Quality Score")
     frs: float = Field(..., ge=0, le=10, description="Formation Reliability Score")
-    sweep_meta: Optional[Dict[str, Any]] = Field(None, description="Sweep metadata")
-    clues_1m: List[str] = Field(default_factory=list, description="1-minute clues")
+    sweep_meta: dict[str, Any] | None = Field(None, description="Sweep metadata")
+    clues_1m: list[str] = Field(default_factory=list, description="1-minute clues")
     retracement: float = Field(..., ge=0, description="Retracement level")
     thrust_break: bool = Field(default=False, description="Thrust break detected")
 
@@ -206,7 +206,7 @@ class LLMRequestConfig(BaseModel):
     provider: str = Field(..., description="LLM provider")
     model: str = Field(..., description="LLM model")
     temperature: float = Field(default=0.1, ge=0, le=2, description="Temperature")
-    max_tokens: Optional[int] = Field(default=1000, ge=1, description="Max tokens")
+    max_tokens: int | None = Field(default=1000, ge=1, description="Max tokens")
     timeout: float = Field(default=30.0, ge=1, description="Timeout in seconds")
     retry_attempts: int = Field(default=3, ge=0, description="Retry attempts")
 
@@ -217,7 +217,7 @@ class LLMResponseMetadata(BaseModel):
     """LLM response metadata."""
     provider: str = Field(..., description="LLM provider")
     model: str = Field(..., description="LLM model")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     response_time_ms: float = Field(..., ge=0, description="Response time in ms")
     tokens_used: int = Field(..., ge=0, description="Tokens used")
     cost_estimate: float = Field(..., ge=0, description="Cost estimate in USD")
@@ -229,11 +229,11 @@ class LLMInteraction(BaseModel):
     """Complete LLM interaction record."""
     request_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Request ID")
     config: LLMRequestConfig = Field(..., description="Request configuration")
-    input_data: Union[LLMInput, RiskInput, HolisticInput] = Field(..., description="Input data")
-    output_data: Optional[Union[LLMOutput, List[RiskDecision]]] = Field(None, description="Output data")
+    input_data: LLMInput | RiskInput | HolisticInput = Field(..., description="Input data")
+    output_data: LLMOutput | list[RiskDecision] | None = Field(None, description="Output data")
     metadata: LLMResponseMetadata = Field(..., description="Response metadata")
     success: bool = Field(..., description="Success flag")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
+    error_message: str | None = Field(None, description="Error message if failed")
 
     model_config = ConfigDict(frozen=True)
 
@@ -246,13 +246,13 @@ class LLMStats(BaseModel):
     average_response_time_ms: float = Field(default=0.0, ge=0, description="Average response time")
     total_tokens_used: int = Field(default=0, ge=0, description="Total tokens used")
     total_cost_estimate: float = Field(default=0.0, ge=0, description="Total cost estimate")
-    last_request_time: Optional[datetime] = Field(None, description="Last request time")
+    last_request_time: datetime | None = Field(None, description="Last request time")
 
     model_config = ConfigDict(frozen=True)
 
 
 # Utility functions for schema validation
-def validate_llm_input(data: Dict[str, Any], task: LLMTask) -> LLMInput:
+def validate_llm_input(data: dict[str, Any], task: LLMTask) -> LLMInput:
     """
     Validate and create LLM input.
 
@@ -267,7 +267,7 @@ def validate_llm_input(data: Dict[str, Any], task: LLMTask) -> LLMInput:
     return LLMInput.model_validate(data)
 
 
-def validate_llm_output(data: Dict[str, Any], task: LLMTask) -> LLMOutput:
+def validate_llm_output(data: dict[str, Any], task: LLMTask) -> LLMOutput:
     """
     Validate and create LLM output.
 
@@ -354,8 +354,8 @@ def create_validation(
     verdict: str,
     priority: float,
     reason: str,
-    risk_flags: Optional[RiskFlags] = None,
-    edits: Optional[SetupEdit] = None
+    risk_flags: RiskFlags | None = None,
+    edits: SetupEdit | None = None
 ) -> Validation:
     """
     Create validation result.

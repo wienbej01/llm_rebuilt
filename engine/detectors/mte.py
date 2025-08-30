@@ -5,15 +5,14 @@ Detects Momentum Thrust Entry setups.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 import logging
+from typing import Any
 
 import numpy as np
 
-from engine.types import SetupProposal, Bar, Side, SetupType, SwingPoint, MSS, FVG
-from engine.state import MarketState
 from engine.detectors.registry import register_detector
+from engine.state import MarketState
+from engine.types import MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +32,9 @@ logger = logging.getLogger(__name__)
 )
 def detect_mte_setups(
     market_state: MarketState,
-    bars_1m_window: List[Bar],
-    config: Dict[str, Any]
-) -> List[SetupProposal]:
+    bars_1m_window: list[Bar],
+    config: dict[str, Any]
+) -> list[SetupProposal]:
     """
     Detect TCEA-MTE setups: Momentum Thrust Entry.
 
@@ -174,7 +173,7 @@ def _get_supporting_swings(
     mss: MSS,
     market_state: MarketState,
     min_strength: int
-) -> List[SwingPoint]:
+) -> list[SwingPoint]:
     """Get swings that support the MSS."""
     supporting_swings = []
 
@@ -223,7 +222,7 @@ def _identify_thrust_pattern(
     mss: MSS,
     market_state: MarketState,
     min_strength: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Identify thrust pattern after MSS."""
     if not market_state.bars_5m:
         return {"has_thrust": False, "strength": 0.0}
@@ -266,7 +265,7 @@ def _identify_thrust_pattern(
     }
 
 
-def _calculate_bullish_thrust(bars: List[Bar], base_price: float) -> float:
+def _calculate_bullish_thrust(bars: list[Bar], base_price: float) -> float:
     """Calculate bullish thrust strength."""
     if not bars:
         return 0.0
@@ -278,7 +277,7 @@ def _calculate_bullish_thrust(bars: List[Bar], base_price: float) -> float:
     return thrust_strength
 
 
-def _calculate_bearish_thrust(bars: List[Bar], base_price: float) -> float:
+def _calculate_bearish_thrust(bars: list[Bar], base_price: float) -> float:
     """Calculate bearish thrust strength."""
     if not bars:
         return 0.0
@@ -290,7 +289,7 @@ def _calculate_bearish_thrust(bars: List[Bar], base_price: float) -> float:
     return thrust_strength
 
 
-def _calculate_thrust_volume_ratio(thrust_bars: List[Bar], market_state: MarketState) -> float:
+def _calculate_thrust_volume_ratio(thrust_bars: list[Bar], market_state: MarketState) -> float:
     """Calculate volume ratio during thrust."""
     if not thrust_bars:
         return 1.0
@@ -309,7 +308,7 @@ def _calculate_thrust_volume_ratio(thrust_bars: List[Bar], market_state: MarketS
     return avg_thrust_volume / avg_recent_volume
 
 
-def _determine_entry_timing(thrust_bars: List[Bar], thrust_direction: str) -> str:
+def _determine_entry_timing(thrust_bars: list[Bar], thrust_direction: str) -> str:
     """Determine optimal entry timing."""
     if not thrust_bars:
         return "unknown"
@@ -334,8 +333,8 @@ def _determine_entry_timing(thrust_bars: List[Bar], thrust_direction: str) -> st
 
 
 def _calculate_entry_price(
-    thrust_info: Dict[str, Any],
-    bars_1m_window: List[Bar],
+    thrust_info: dict[str, Any],
+    bars_1m_window: list[Bar],
     direction: Side
 ) -> float:
     """Calculate entry price based on thrust pattern."""
@@ -353,7 +352,7 @@ def _calculate_entry_price(
             return thrust_info["breakout_level"] * 1.001  # Small premium
 
 
-def _calculate_sl_price(thrust_info: Dict[str, Any], direction: Side) -> float:
+def _calculate_sl_price(thrust_info: dict[str, Any], direction: Side) -> float:
     """Calculate stop loss price based on thrust pattern."""
     if direction == Side.BUY:
         # For bullish setup, SL below thrust start
@@ -386,10 +385,10 @@ def _calculate_risk_reward(entry_price: float, sl_price: float, tp_price: float)
 
 
 def _get_relevant_swings(
-    swings: List[SwingPoint],
+    swings: list[SwingPoint],
     mss: MSS,
     min_strength: int
-) -> List[SwingPoint]:
+) -> list[SwingPoint]:
     """Get relevant swing points for the setup."""
     relevant = []
 

@@ -5,8 +5,8 @@ Prompt pack for different LLM tasks and roles.
 
 from __future__ import annotations
 
-from typing import Dict, Any
 import json
+from typing import Any
 
 from llm.schemas import LLMTask, MarketContext, RiskPolicy
 
@@ -146,7 +146,7 @@ class PromptBuilder:
         self,
         market_context: MarketContext,
         risk_policy: RiskPolicy,
-        observed_features: Dict[str, Any]
+        observed_features: dict[str, Any]
     ) -> str:
         """
         Build holistic proposer prompt with context.
@@ -187,7 +187,7 @@ class PromptBuilder:
         self,
         risk_policy: RiskPolicy,
         candidate_orders: list,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> str:
         """
         Build risk officer prompt with context.
@@ -229,7 +229,7 @@ class PromptBuilder:
 
         return f"{system_prompt}\n\n{task_prompt}\n\nINPUT:\n{json.dumps(context_data, indent=2)}"
 
-    def _serialize_setup(self, setup) -> Dict[str, Any]:
+    def _serialize_setup(self, setup) -> dict[str, Any]:
         """
         Serialize setup proposal for prompt.
 

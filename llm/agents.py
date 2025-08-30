@@ -5,20 +5,24 @@ Different agent roles for various LLM tasks.
 
 from __future__ import annotations
 
-import asyncio
-import json
-from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Union
 import logging
+from datetime import UTC, datetime
+from typing import Any
 
-from llm.gateway import LLMGateway, LLMProvider, LLMModel
-from llm.schemas import (
-    LLMInput, LLMOutput, Validation, RiskDecision, MarketContext,
-    RiskPolicy, LLMTask, OrderIntent, RiskInput, RiskContext,
-    ObservedFeatures, HolisticInput, LLMRequestConfig, LLMResponseMetadata
-)
+from llm.gateway import LLMGateway, LLMModel, LLMProvider
 from llm.prompts import PromptBuilder, PromptPack
-from llm.validators import LLMValidator, LLMValidationError
+from llm.schemas import (
+    LLMOutput,
+    LLMRequestConfig,
+    LLMTask,
+    MarketContext,
+    ObservedFeatures,
+    OrderIntent,
+    RiskContext,
+    RiskDecision,
+    RiskPolicy,
+)
+from llm.validators import LLMValidator
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +62,7 @@ class LLMAgent:
 
         logger.info(f"Initialized {self.__class__.__name__}")
 
-    async def process_request(self, *args, **kwargs) -> Dict[str, Any]:
+    async def process_request(self, *args, **kwargs) -> dict[str, Any]:
         """
         Process request (to be implemented by subclasses).
 
@@ -74,7 +78,7 @@ class LLMAgent:
     def _update_stats(self, success: bool, response_time_ms: float) -> None:
         """Update agent statistics."""
         self.stats["total_requests"] += 1
-        self.stats["last_request_time"] = datetime.now(timezone.utc)
+        self.stats["last_request_time"] = datetime.now(UTC)
 
         if success:
             self.stats["successful_requests"] += 1
@@ -88,7 +92,7 @@ class LLMAgent:
             (current_avg * (total_requests - 1) + response_time_ms) / total_requests
         )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get agent statistics."""
         return self.stats.copy()
 
@@ -100,7 +104,7 @@ class ValidatorAgent(LLMAgent):
         self,
         market_context: MarketContext,
         risk_policy: RiskPolicy,
-        setups: List[Dict[str, Any]]
+        setups: list[dict[str, Any]]
     ) -> LLMOutput:
         """
         Validate and rank setup proposals.
@@ -113,7 +117,7 @@ class ValidatorAgent(LLMAgent):
         Returns:
             Validation results
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             # Build prompt
@@ -138,14 +142,14 @@ class ValidatorAgent(LLMAgent):
             llm_output = self.validator.validate_output(response_data, LLMTask.VALIDATE_AND_RANK)
 
             # Update stats
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, response_time)
 
             logger.debug(f"Validator agent processed {len(setups)} setups")
             return llm_output
 
         except Exception as e:
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, response_time)
             logger.error(f"Validator agent failed: {e}")
             raise
@@ -171,7 +175,7 @@ class HolisticProposerAgent(LLMAgent):
         Returns:
             Holistic proposals
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             # Build prompt
@@ -196,14 +200,14 @@ class HolisticProposerAgent(LLMAgent):
             llm_output = self.validator.validate_output(response_data, LLMTask.PROPOSE_HOLISTIC)
 
             # Update stats
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, response_time)
 
             logger.debug(f"Holistic proposer agent generated {len(llm_output.holistic_proposals)} proposals")
             return llm_output
 
         except Exception as e:
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, response_time)
             logger.error(f"Holistic proposer agent failed: {e}")
             raise
@@ -215,9 +219,9 @@ class RiskOfficerAgent(LLMAgent):
     async def process_request(
         self,
         risk_policy: RiskPolicy,
-        candidate_orders: List[OrderIntent],
+        candidate_orders: list[OrderIntent],
         context: RiskContext
-    ) -> List[RiskDecision]:
+    ) -> list[RiskDecision]:
         """
         Assess risk and make decisions.
 
@@ -229,7 +233,7 @@ class RiskOfficerAgent(LLMAgent):
         Returns:
             Risk decisions
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             # Build prompt
@@ -254,14 +258,14 @@ class RiskOfficerAgent(LLMAgent):
             llm_output = self.validator.validate_output(response_data, LLMTask.RISK_VETO_OR_SCALE)
 
             # Update stats
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, response_time)
 
             logger.debug(f"Risk officer agent processed {len(candidate_orders)} orders")
             return llm_output.risk_decisions
 
         except Exception as e:
-            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, response_time)
             logger.error(f"Risk officer agent failed: {e}")
             raise
@@ -347,7 +351,7 @@ class LLMOrchestrator:
         self,
         market_context: MarketContext,
         risk_policy: RiskPolicy,
-        setups: List[Dict[str, Any]]
+        setups: list[dict[str, Any]]
     ) -> LLMOutput:
         """
         Validate and rank setup proposals.
@@ -360,7 +364,7 @@ class LLMOrchestrator:
         Returns:
             Validation results
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             validator_agent = self.get_agent("validator")
@@ -369,13 +373,13 @@ class LLMOrchestrator:
             )
 
             # Update stats
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, orchestration_time)
 
             return result
 
         except Exception as e:
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, orchestration_time)
             logger.error(f"Validate and rank setups failed: {e}")
             raise
@@ -397,7 +401,7 @@ class LLMOrchestrator:
         Returns:
             Holistic proposals
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             proposer_agent = self.get_agent("holistic_proposer")
@@ -406,13 +410,13 @@ class LLMOrchestrator:
             )
 
             # Update stats
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, orchestration_time)
 
             return result
 
         except Exception as e:
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, orchestration_time)
             logger.error(f"Propose holistic setups failed: {e}")
             raise
@@ -420,9 +424,9 @@ class LLMOrchestrator:
     async def assess_risk_decisions(
         self,
         risk_policy: RiskPolicy,
-        candidate_orders: List[OrderIntent],
+        candidate_orders: list[OrderIntent],
         context: RiskContext
-    ) -> List[RiskDecision]:
+    ) -> list[RiskDecision]:
         """
         Assess risk and make decisions.
 
@@ -434,7 +438,7 @@ class LLMOrchestrator:
         Returns:
             Risk decisions
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             risk_agent = self.get_agent("risk_officer")
@@ -443,13 +447,13 @@ class LLMOrchestrator:
             )
 
             # Update stats
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, orchestration_time)
 
             return result
 
         except Exception as e:
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, orchestration_time)
             logger.error(f"Assess risk decisions failed: {e}")
             raise
@@ -458,11 +462,11 @@ class LLMOrchestrator:
         self,
         market_context: MarketContext,
         risk_policy: RiskPolicy,
-        setups: List[Dict[str, Any]],
+        setups: list[dict[str, Any]],
         observed_features: ObservedFeatures,
-        candidate_orders: List[OrderIntent],
+        candidate_orders: list[OrderIntent],
         risk_context: RiskContext
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process complete LLM workflow.
 
@@ -477,7 +481,7 @@ class LLMOrchestrator:
         Returns:
             Complete workflow results
         """
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         try:
             results = {}
@@ -501,14 +505,14 @@ class LLMOrchestrator:
                 )
 
             # Update stats
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(True, orchestration_time)
 
             logger.info("Complete LLM workflow processed successfully")
             return results
 
         except Exception as e:
-            orchestration_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            orchestration_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
             self._update_stats(False, orchestration_time)
             logger.error(f"Complete workflow failed: {e}")
             raise
@@ -516,7 +520,7 @@ class LLMOrchestrator:
     def _update_stats(self, success: bool, orchestration_time_ms: float) -> None:
         """Update orchestrator statistics."""
         self.stats["total_orchestrations"] += 1
-        self.stats["last_orchestration_time"] = datetime.now(timezone.utc)
+        self.stats["last_orchestration_time"] = datetime.now(UTC)
 
         if success:
             self.stats["successful_orchestrations"] += 1
@@ -530,7 +534,7 @@ class LLMOrchestrator:
             (current_avg * (total_orchestrations - 1) + orchestration_time_ms) / total_orchestrations
         )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get orchestrator statistics."""
         stats = self.stats.copy()
 
@@ -545,7 +549,7 @@ class LLMOrchestrator:
 
         return stats
 
-    def get_all_stats(self) -> Dict[str, Any]:
+    def get_all_stats(self) -> dict[str, Any]:
         """Get all statistics including gateway stats."""
         stats = self.get_stats()
         stats["gateway"] = self.gateway.get_stats()

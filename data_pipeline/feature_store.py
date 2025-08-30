@@ -6,13 +6,12 @@ Handles data persistence, versioning, and efficient querying.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, date, timezone
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
-import json
 import hashlib
+import json
 import logging
-import shutil
+from datetime import UTC, date, datetime
+from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -42,7 +41,7 @@ class DataVersion(BaseModel):
     checksum: str
     record_count: int
     schema_hash: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class FeatureStore:
@@ -110,8 +109,8 @@ class FeatureStore:
         self,
         symbol: str,
         timeframe: str,
-        bars: List[Bar],
-        metadata: Optional[Dict[str, Any]] = None
+        bars: list[Bar],
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """
         Store bars data with versioning and metadata.
@@ -134,6 +133,9 @@ class FeatureStore:
         # Convert bars to DataFrame
         df = self._bars_to_dataframe(bars)
 
+        # Add metadata columns
+        df['symbol'] = symbol
+        df['timeframe'] = timeframe
         df['version'] = version
 
         # Store as Parquet
@@ -154,10 +156,10 @@ class FeatureStore:
         self,
         symbol: str,
         timeframe: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        version: Optional[str] = None
-    ) -> List[Bar]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+        version: str | None = None
+    ) -> list[Bar]:
         """
         Load bars data from feature store.
 
@@ -195,15 +197,11 @@ class FeatureStore:
         bars = []
         for _, row in combined_df.iterrows():
             bar = Bar(
-                symbol=row['symbol'],
-                timeframe=row['timeframe'],
-                timestamp=row['timestamp'].to_pydatetime().replace(tzinfo=timezone.utc),
-                session=row['session'],
-                venue=row.get('venue'),
-                open=row['open'],
-                high=row['high'],
-                low=row['low'],
-                close=row['close'],
+                timestamp=row['timestamp'].to_pydatetime().replace(tzinfo=UTC),
+                open=float(row['open']),
+                high=float(row['high']),
+                low=float(row['low']),
+                close=float(row['close']),
                 volume=int(row['volume'])
             )
             bars.append(bar)
@@ -215,9 +213,9 @@ class FeatureStore:
         self,
         symbol: str,
         feature_name: str,
-        features: Dict[str, List[float]],
-        timestamps: List[datetime],
-        metadata: Optional[Dict[str, Any]] = None
+        features: dict[str, list[float]],
+        timestamps: list[datetime],
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """
         Store calculated features.
@@ -263,10 +261,10 @@ class FeatureStore:
         self,
         symbol: str,
         feature_name: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        version: Optional[str] = None
-    ) -> Dict[str, List[float]]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+        version: str | None = None
+    ) -> dict[str, list[float]]:
         """
         Load features from feature store.
 
@@ -310,32 +308,25 @@ class FeatureStore:
         logger.info(f"Loaded features {feature_name} for {symbol}")
         return features
 
-    def _bars_to_dataframe(self, bars: List[Bar]) -> pd.DataFrame:
+    def _bars_to_dataframe(self, bars: list[Bar]) -> pd.DataFrame:
         """Convert bars to DataFrame."""
-        if not bars:
-            return pd.DataFrame()
         data = {
-            'symbol': [bar.symbol for bar in bars],
-            'timeframe': [bar.timeframe for bar in bars],
             'timestamp': [bar.timestamp for bar in bars],
-            'session': [bar.session for bar in bars],
-            'venue': [bar.venue for bar in bars],
             'open': [bar.open for bar in bars],
             'high': [bar.high for bar in bars],
             'low': [bar.low for bar in bars],
             'close': [bar.close for bar in bars],
             'volume': [bar.volume for bar in bars]
         }
-        df = pd.DataFrame(data)
-        return df
+        return pd.DataFrame(data)
 
-    def _generate_version(self, bars: List[Bar]) -> str:
+    def _generate_version(self, bars: list[Bar]) -> str:
         """Generate version string based on bar data."""
         # Create hash of the data
         data_str = json.dumps([bar.model_dump() for bar in bars], sort_keys=True, default=str)
         return hashlib.sha256(data_str.encode()).hexdigest()[:12]
 
-    def _generate_version_from_data(self, data: List[Dict]) -> str:
+    def _generate_version_from_data(self, data: list[dict]) -> str:
         """Generate version string from data."""
         data_str = json.dumps(data, sort_keys=True, default=str)
         return hashlib.sha256(data_str.encode()).hexdigest()[:12]
@@ -365,7 +356,7 @@ class FeatureStore:
 
         await asyncio.get_event_loop().run_in_executor(None, _write_parquet)
 
-    async def _load_parquet(self, file_path: Path) -> Optional[pd.DataFrame]:
+    async def _load_parquet(self, file_path: Path) -> pd.DataFrame | None:
         """Load DataFrame from Parquet file."""
         if not file_path.exists():
             return None
@@ -379,14 +370,14 @@ class FeatureStore:
         self,
         symbol: str,
         timeframe: str,
-        bars: List[Bar],
+        bars: list[Bar],
         version: str,
-        metadata: Dict[str, Any]
+        metadata: dict[str, Any]
     ) -> None:
         """Store version metadata."""
         version_info = DataVersion(
             version=version,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             checksum=self._generate_version(bars),
             record_count=len(bars),
             schema_hash=self._get_schema_hash(bars),
@@ -402,12 +393,12 @@ class FeatureStore:
         symbol: str,
         feature_name: str,
         version: str,
-        metadata: Dict[str, Any]
+        metadata: dict[str, Any]
     ) -> None:
         """Store feature version metadata."""
         version_info = DataVersion(
             version=version,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             checksum=version,  # Version is already a hash
             record_count=0,  # Will be updated when loaded
             schema_hash="",
@@ -418,14 +409,14 @@ class FeatureStore:
         metadata_path = self._get_feature_file_path(symbol, feature_name, date.today(), version).with_suffix('.metadata.json')
         await self._write_json(version_info.model_dump(), metadata_path)
 
-    def _get_schema_hash(self, bars: List[Bar]) -> str:
+    def _get_schema_hash(self, bars: list[Bar]) -> str:
         """Get hash of bar schema."""
         if not bars:
             return ""
         schema = list(bars[0].model_dump().keys())
         return hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()[:12]
 
-    async def _write_json(self, data: Dict[str, Any], file_path: Path) -> None:
+    async def _write_json(self, data: dict[str, Any], file_path: Path) -> None:
         """Write data as JSON file."""
         def _write():
             with open(file_path, 'w') as f:
@@ -437,10 +428,10 @@ class FeatureStore:
         self,
         symbol: str,
         timeframe: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        version: Optional[str] = None
-    ) -> List[Path]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+        version: str | None = None
+    ) -> list[Path]:
         """Find data files matching criteria."""
         symbol_path = self.base_path / symbol / timeframe
 
@@ -472,10 +463,10 @@ class FeatureStore:
         self,
         symbol: str,
         feature_name: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        version: Optional[str] = None
-    ) -> List[Path]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+        version: str | None = None
+    ) -> list[Path]:
         """Find feature files matching criteria."""
         feature_path = self.base_path / "features" / symbol / feature_name
 
@@ -520,11 +511,11 @@ class FeatureStore:
                 INSERT OR REPLACE INTO file_index
                 (symbol, timeframe, date, file_path, version, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, [symbol, timeframe, date_val, str(file_path), version, datetime.now(timezone.utc)])
+            """, [symbol, timeframe, date_val, str(file_path), version, datetime.now(UTC)])
 
         await asyncio.get_event_loop().run_in_executor(None, _update)
 
-    async def cleanup_old_versions(self, max_versions: Optional[int] = None) -> None:
+    async def cleanup_old_versions(self, max_versions: int | None = None) -> None:
         """Clean up old versions to save space."""
         max_vers = max_versions or self.config.max_versions
 
@@ -532,7 +523,7 @@ class FeatureStore:
         # In practice, you'd want more sophisticated cleanup logic
         logger.info(f"Cleaning up versions, keeping last {max_vers}")
 
-    def get_storage_info(self) -> Dict[str, Any]:
+    def get_storage_info(self) -> dict[str, Any]:
         """Get information about stored data."""
         info = {
             "base_path": str(self.base_path),

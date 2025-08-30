@@ -5,15 +5,14 @@ Detects Smart Pullback & Micro-FVG (trend rhythm) setups.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
 import logging
+from typing import Any
 
 import numpy as np
 
-from engine.types import SetupProposal, Bar, Side, SetupType, SwingPoint, MSS, FVG
-from engine.state import MarketState
 from engine.detectors.registry import register_detector
+from engine.state import MarketState
+from engine.types import FVG, MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +33,9 @@ logger = logging.getLogger(__name__)
 )
 def detect_tcea_spmf_v3_setups(
     market_state: MarketState,
-    bars_1m_window: List[Bar],
-    config: Dict[str, Any]
-) -> List[SetupProposal]:
+    bars_1m_window: list[Bar],
+    config: dict[str, Any]
+) -> list[SetupProposal]:
     """
     Detect TCEA-SPMF v3 setups: Smart Pullback & Micro-FVG (trend rhythm).
 
@@ -148,10 +147,10 @@ def detect_tcea_spmf_v3_setups(
 
 def _identify_impulse_pullback(
     market_state: MarketState,
-    swings: List[SwingPoint],
+    swings: list[SwingPoint],
     min_retracement: float,
     max_retracement: float
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Identify impulse leg and pullback pattern."""
     if len(swings) < 4:
         return {"has_pattern": False, "direction": "unknown"}
@@ -228,7 +227,7 @@ def _identify_impulse_pullback(
     return {"has_pattern": False, "direction": "unknown"}
 
 
-def _get_mss_for_swing_range(start_bar: int, end_bar: int, market_state: MarketState) -> List[MSS]:
+def _get_mss_for_swing_range(start_bar: int, end_bar: int, market_state: MarketState) -> list[MSS]:
     """Get MSS within a swing range."""
     relevant_mss = []
 
@@ -284,9 +283,9 @@ def _calculate_impulse_volume_ratio(start_bar: int, end_bar: int, market_state: 
 
 
 def _detect_micro_fvgs_in_pullback(
-    impulse_pullback_info: Dict[str, Any],
-    bars_1m_window: List[Bar]
-) -> List[FVG]:
+    impulse_pullback_info: dict[str, Any],
+    bars_1m_window: list[Bar]
+) -> list[FVG]:
     """Detect micro-FVGs inside pullback."""
     micro_fvgs = []
 
@@ -340,9 +339,9 @@ def _detect_micro_fvgs_in_pullback(
 
 
 def _check_pullback_breakout(
-    impulse_pullback_info: Dict[str, Any],
+    impulse_pullback_info: dict[str, Any],
     market_state: MarketState
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check for breakout of pullback structure."""
     if not market_state.bars_5m:
         return {"has_breakout": False, "strength": 0.0, "breakout_price": None}
@@ -385,10 +384,10 @@ def _check_pullback_breakout(
 
 
 def _get_relevant_swings(
-    swings: List[SwingPoint],
-    impulse_pullback_info: Dict[str, Any],
+    swings: list[SwingPoint],
+    impulse_pullback_info: dict[str, Any],
     min_strength: int
-) -> List[SwingPoint]:
+) -> list[SwingPoint]:
     """Get relevant swing points for the setup."""
     relevant = []
 
@@ -404,7 +403,7 @@ def _get_relevant_swings(
     return relevant
 
 
-def _calculate_sl_price(impulse_pullback_info: Dict[str, Any], direction: Side) -> float:
+def _calculate_sl_price(impulse_pullback_info: dict[str, Any], direction: Side) -> float:
     """Calculate stop loss price based on pullback extreme."""
     if direction == Side.BUY:
         # For bullish setup, SL below pullback low

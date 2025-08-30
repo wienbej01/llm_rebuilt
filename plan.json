@@ -1,0 +1,347 @@
+{
+  "version": "1.0",
+  "owner": "Architect",
+  "phases": [
+    {
+      "name": "Bootstrap & Safety",
+      "steps": [
+        {
+          "id": "BOOT-ENV",
+          "title": "Environment & Tooling",
+          "acceptance": ["venv active", "ruff/mypy/pytest available"],
+          "tasks": ["create venv", "install deps", "init logs/"],
+          "depends_on": [],
+          "status": "pending"
+        },
+        {
+          "id": "REPO-AUDIT",
+          "title": "Repository Audit",
+          "acceptance": ["logs/repo_audit.json and .md produced"],
+          "tasks": ["run audit script", "inventory files", "detect corruption"],
+          "depends_on": ["BOOT-ENV"],
+          "status": "pending"
+        },
+        {
+          "id": "QUARANTINE",
+          "title": "Quarantine Corrupted Files",
+          "acceptance": ["corrupted files moved to wip/recovery/", "recovery log updated"],
+          "tasks": ["identify corrupted files", "move to recovery", "log moves"],
+          "depends_on": ["REPO-AUDIT"],
+          "status": "pending"
+        },
+        {
+          "id": "DELTA-ANALYSIS",
+          "title": "Delta Analysis",
+          "acceptance": ["logs/delta_plan_vs_repo.md complete"],
+          "tasks": ["compare current vs target", "identify gaps"],
+          "depends_on": ["REPO-AUDIT"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Data Layer",
+      "steps": [
+        {
+          "id": "DATA-INTERFACES",
+          "title": "Data Interfaces",
+          "acceptance": ["IDataSource, IDataValidator interfaces defined"],
+          "tasks": ["create interfaces", "define schemas"],
+          "depends_on": ["DELTA-ANALYSIS"],
+          "status": "pending"
+        },
+        {
+          "id": "DATA-LOADERS",
+          "title": "Data Loaders",
+          "acceptance": ["all loaders working", "unified interface"],
+          "tasks": ["implement Databento local/API", "implement Polygon", "implement CSV"],
+          "depends_on": ["DATA-INTERFACES"],
+          "status": "pending"
+        },
+        {
+          "id": "DATA-PIPELINE",
+          "title": "Data Pipeline",
+          "acceptance": ["pipeline processes data", "no-look-ahead guards"],
+          "tasks": ["build pipeline", "add validators", "enforce no-leak"],
+          "depends_on": ["DATA-LOADERS"],
+          "status": "pending"
+        },
+        {
+          "id": "FEATURES",
+          "title": "Features Implementation",
+          "acceptance": ["features guarantee valid outputs", "no NaN on short windows"],
+          "tasks": ["implement ATR, VWAP, RSI", "add fractals, volatility"],
+          "depends_on": ["DATA-PIPELINE"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Strategy Layer",
+      "steps": [
+        {
+          "id": "STRATEGY-BASE",
+          "title": "Strategy Base",
+          "acceptance": ["StrategyBase supports composition", "Rule DSL working"],
+          "tasks": ["enhance StrategyBase", "add TacticBase", "implement Signal objects"],
+          "depends_on": ["DATA-LAYER"],
+          "status": "pending"
+        },
+        {
+          "id": "TACTICS",
+          "title": "Tactics Implementation",
+          "acceptance": ["all tactics detect setups", "deterministic rule evaluation"],
+          "tasks": ["implement ORB, Momentum, Mean Reversion", "implement ATR Channel, VWAP Reversion", "implement S/R Break Retest, ICT Killzone, FVG"],
+          "depends_on": ["STRATEGY-BASE"],
+          "status": "pending"
+        },
+        {
+          "id": "EXITS",
+          "title": "Exit Strategies",
+          "acceptance": ["exits fire correctly", "breakeven flips supported"],
+          "tasks": ["implement RR Static, ATR Trail", "implement VWAP Trail, Time Stop, Break Even"],
+          "depends_on": ["STRATEGY-BASE"],
+          "status": "pending"
+        },
+        {
+          "id": "PORTFOLIO",
+          "title": "Portfolio Aggregation",
+          "acceptance": ["handles overlapping signals", "prioritizes by quality"],
+          "tasks": ["build multi-tactic aggregation", "add conflict resolution"],
+          "depends_on": ["TACTICS", "EXITS"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Risk Layer",
+      "steps": [
+        {
+          "id": "SIZING",
+          "title": "Position Sizing",
+          "acceptance": ["sizing respects account risk limits"],
+          "tasks": ["implement fixed and vol-adjusted sizing"],
+          "depends_on": ["STRATEGY-LAYER"],
+          "status": "pending"
+        },
+        {
+          "id": "LIMITS",
+          "title": "Risk Limits",
+          "acceptance": ["limits enforced per trade and aggregate"],
+          "tasks": ["implement position limits", "add heat and instrument caps"],
+          "depends_on": ["SIZING"],
+          "status": "pending"
+        },
+        {
+          "id": "DRAWDOWN",
+          "title": "Drawdown Management",
+          "acceptance": ["MDD halts trading when threshold reached"],
+          "tasks": ["add MDD tracking", "implement halt logic"],
+          "depends_on": ["LIMITS"],
+          "status": "pending"
+        },
+        {
+          "id": "COMPLIANCE",
+          "title": "Compliance Guards",
+          "acceptance": ["guards prevent invalid orders"],
+          "tasks": ["build sanity guards", "add risk checks"],
+          "depends_on": ["DRAWDOWN"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Backtest Layer",
+      "steps": [
+        {
+          "id": "BACKTEST-ENGINE",
+          "title": "Backtest Engine",
+          "acceptance": ["engine processes bars correctly", "enforces no-leak"],
+          "tasks": ["implement backtest engine", "add no-look-ahead"],
+          "depends_on": ["RISK-LAYER"],
+          "status": "pending"
+        },
+        {
+          "id": "ANALYZERS",
+          "title": "Backtest Analyzers",
+          "acceptance": ["analyzers produce accurate statistics"],
+          "tasks": ["build trade analysis", "add performance metrics"],
+          "depends_on": ["BACKTEST-ENGINE"],
+          "status": "pending"
+        },
+        {
+          "id": "METRICS",
+          "title": "Metrics Calculation",
+          "acceptance": ["metrics reconcile with ledger"],
+          "tasks": ["implement Sharpe, MDD", "add recovery factor"],
+          "depends_on": ["ANALYZERS"],
+          "status": "pending"
+        },
+        {
+          "id": "AUDIT",
+          "title": "Forensic Audit",
+          "acceptance": ["audit logs every decision with reasons"],
+          "tasks": ["add bar-by-bar audit", "implement ledger reconciliation"],
+          "depends_on": ["METRICS"],
+          "status": "pending"
+        },
+        {
+          "id": "FIXTURES",
+          "title": "Sample Fixtures",
+          "acceptance": ["fixtures cover edge cases"],
+          "tasks": ["create sample datasets", "add test scenarios"],
+          "depends_on": ["AUDIT"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "LLM Layer",
+      "steps": [
+        {
+          "id": "LLM-INTERFACE",
+          "title": "LLM Interface Enhancement",
+          "acceptance": ["interface handles all providers reliably"],
+          "tasks": ["add rate limits", "enhance async support"],
+          "depends_on": ["BACKTEST-LAYER"],
+          "status": "pending"
+        },
+        {
+          "id": "VALIDATOR",
+          "title": "PSE Validator",
+          "acceptance": ["validator approves/denies with rationale"],
+          "tasks": ["complete validator", "add risk constraints"],
+          "depends_on": ["LLM-INTERFACE"],
+          "status": "pending"
+        },
+        {
+          "id": "PROPOSER",
+          "title": "Holistic Proposer",
+          "acceptance": ["proposer generates valid trades"],
+          "tasks": ["implement proposer", "ensure compliance"],
+          "depends_on": ["VALIDATOR"],
+          "status": "pending"
+        },
+        {
+          "id": "MEMORY",
+          "title": "State Memory",
+          "acceptance": ["memory tracks constraints without full payloads"],
+          "tasks": ["add minimal state memory"],
+          "depends_on": ["PROPOSER"],
+          "status": "pending"
+        },
+        {
+          "id": "GUARDS",
+          "title": "Token & Privacy Guards",
+          "acceptance": ["guards prevent leaks and overuse"],
+          "tasks": ["implement token guards", "add privacy guards"],
+          "depends_on": ["MEMORY"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Paper Trading Layer",
+      "steps": [
+        {
+          "id": "IBKR-CLIENT",
+          "title": "IBKR Client",
+          "acceptance": ["client connects, places/cancels orders"],
+          "tasks": ["build ib_insync wrapper"],
+          "depends_on": ["LLM-LAYER"],
+          "status": "pending"
+        },
+        {
+          "id": "ORDER-ROUTER",
+          "title": "Order Router",
+          "acceptance": ["router translates intents to broker orders"],
+          "tasks": ["implement routing logic"],
+          "depends_on": ["IBKR-CLIENT"],
+          "status": "pending"
+        },
+        {
+          "id": "PAPER-DRIVER",
+          "title": "Paper Driver",
+          "acceptance": ["driver runs dry-run successfully"],
+          "tasks": ["create paper driver", "add mocks"],
+          "depends_on": ["ORDER-ROUTER"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Testing & QA Gates",
+      "steps": [
+        {
+          "id": "UNIT-TESTS",
+          "title": "Unit Tests",
+          "acceptance": [">=95% coverage", "all critical logic tested"],
+          "tasks": ["write unit tests", "cover all components"],
+          "depends_on": ["PAPER-TRADING"],
+          "status": "pending"
+        },
+        {
+          "id": "INTEGRATION-TESTS",
+          "title": "Integration Tests",
+          "acceptance": ["tests pass invariants", "no-look-ahead validated"],
+          "tasks": ["build integration tests", "add reconciliation checks"],
+          "depends_on": ["UNIT-TESTS"],
+          "status": "pending"
+        },
+        {
+          "id": "E2E-TESTS",
+          "title": "E2E Tests",
+          "acceptance": ["dry-run and smoke tests pass"],
+          "tasks": ["implement e2e tests", "validate paper trading"],
+          "depends_on": ["INTEGRATION-TESTS"],
+          "status": "pending"
+        },
+        {
+          "id": "QA-GATES",
+          "title": "QA Gates System",
+          "acceptance": ["gates enforce acceptance criteria"],
+          "tasks": ["create QA gate system"],
+          "depends_on": ["E2E-TESTS"],
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "name": "Docs & DX",
+      "steps": [
+        {
+          "id": "README",
+          "title": "README Update",
+          "acceptance": ["README covers backtest and paper workflows"],
+          "tasks": ["update README", "add quickstarts"],
+          "depends_on": ["QA-GATES"],
+          "status": "pending"
+        },
+        {
+          "id": "SCRIPTS",
+          "title": "Utility Scripts",
+          "acceptance": ["scripts for bootstrap, backtest, report generation"],
+          "tasks": ["create scripts"],
+          "depends_on": ["README"],
+          "status": "pending"
+        },
+        {
+          "id": "EXAMPLES",
+          "title": "Examples & Configs",
+          "acceptance": ["examples demonstrate key features"],
+          "tasks": ["add examples", "provide configs"],
+          "depends_on": ["SCRIPTS"],
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "qa_gates": {
+    "lint": "pass",
+    "type_check": "pass",
+    "unit_tests": ">=95% pass",
+    "integration_tests": "pass",
+    "e2e_tests": "pass",
+    "no_lookahead_tests": "pass"
+  }
+}

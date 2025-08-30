@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Union
 import logging
+from datetime import UTC, datetime
 from enum import Enum
+from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,9 @@ class LLMRequest(BaseModel):
     """LLM request model."""
     provider: LLMProvider
     model: LLMModel
-    messages: List[Dict[str, str]]
+    messages: list[dict[str, str]]
     temperature: float = Field(default=0.1, ge=0.0, le=2.0)
-    max_tokens: Optional[int] = Field(default=1000, ge=1)
+    max_tokens: int | None = Field(default=1000, ge=1)
     timeout: float = Field(default=30.0, ge=1.0)
     retry_attempts: int = Field(default=3, ge=0)
 
@@ -61,11 +61,11 @@ class LLMResponse(BaseModel):
     provider: LLMProvider
     model: LLMModel
     content: str
-    usage: Dict[str, int]
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    usage: dict[str, int]
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     response_time_ms: float
     success: bool
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -135,7 +135,7 @@ class LLMGateway:
     async def send_request(
         self,
         request: LLMRequest,
-        api_key: Optional[str] = None
+        api_key: str | None = None
     ) -> LLMResponse:
         """
         Send request to LLM provider.
@@ -148,7 +148,7 @@ class LLMGateway:
             LLM response
         """
         async with self.semaphore:
-            start_time = datetime.now(timezone.utc)
+            start_time = datetime.now(UTC)
 
             try:
                 # Get API key
@@ -172,7 +172,7 @@ class LLMGateway:
                 return response
 
             except Exception as e:
-                response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                response_time = (datetime.now(UTC) - start_time).total_seconds() * 1000
                 error_response = LLMResponse(
                     provider=request.provider,
                     model=request.model,
@@ -333,8 +333,8 @@ class LLMGateway:
         self,
         method: str,
         url: str,
-        headers: Dict[str, str],
-        json: Dict[str, Any],
+        headers: dict[str, str],
+        json: dict[str, Any],
         max_attempts: int
     ) -> httpx.Response:
         """Retry HTTP request with exponential backoff."""
@@ -354,7 +354,7 @@ class LLMGateway:
     def _update_stats(self, success: bool, response_time_ms: float) -> None:
         """Update request statistics."""
         self.stats["total_requests"] += 1
-        self.stats["last_request_time"] = datetime.now(timezone.utc)
+        self.stats["last_request_time"] = datetime.now(UTC)
 
         if success:
             self.stats["successful_requests"] += 1
@@ -375,9 +375,9 @@ class LLMGateway:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,
-        max_tokens: Optional[int] = None,
-        timeout: Optional[float] = None,
-        retry_attempts: Optional[int] = None
+        max_tokens: int | None = None,
+        timeout: float | None = None,
+        retry_attempts: int | None = None
     ) -> LLMResponse:
         """
         Send JSON-formatted request to LLM.
@@ -415,8 +415,8 @@ class LLMGateway:
     async def validate_json_response(
         self,
         response: LLMResponse,
-        schema: Optional[BaseModel] = None
-    ) -> Dict[str, Any]:
+        schema: BaseModel | None = None
+    ) -> dict[str, Any]:
         """
         Validate and parse JSON response from LLM.
 
@@ -453,7 +453,7 @@ class LLMGateway:
         except Exception as e:
             raise ValueError(f"Schema validation failed: {e}")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get gateway statistics."""
         return self.stats.copy()
 
@@ -462,7 +462,7 @@ class LLMGateway:
         await self.client.aclose()
         logger.info("LLM Gateway closed")
 
-    async def __aenter__(self) -> "LLMGateway":
+    async def __aenter__(self) -> LLMGateway:
         """Async context manager entry."""
         return self
 
