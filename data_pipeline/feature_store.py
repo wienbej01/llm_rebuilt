@@ -18,7 +18,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pydantic import BaseModel
 
-from engine.types import Bar
+from engine.trading_types import Bar
 
 logger = logging.getLogger(__name__)
 

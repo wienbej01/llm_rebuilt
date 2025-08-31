@@ -19,7 +19,7 @@ from engine.kernels.risk import RiskKernel
 from engine.kernels.structure import StructureKernel
 from engine.kernels.tcc_mcs import TCCMCSKernel
 from engine.state import MarketState
-from engine.types import Bar, SetupProposal, Side
+from engine.trading_types import Bar, SetupProposal, Side
 
 logger = logging.getLogger(__name__)
 

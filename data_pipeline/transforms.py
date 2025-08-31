@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from numba import float64, int64, jit
 
-from engine.types import Bar
+from engine.trading_types import Bar
 
 logger = logging.getLogger(__name__)
 

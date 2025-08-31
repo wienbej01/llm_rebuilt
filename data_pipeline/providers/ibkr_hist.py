@@ -10,7 +10,7 @@ import logging
 from datetime import UTC, date
 from typing import Any
 
-from engine.types import Bar
+from engine.trading_types import Bar
 
 from .base import (
     ConnectionError,

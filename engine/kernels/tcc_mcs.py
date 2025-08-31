@@ -14,7 +14,7 @@ import numpy as np
 from numba import float64, jit
 
 from engine.state import MarketState
-from engine.types import MCS, TCC, Bar
+from engine.trading_types import MCS, TCC, Bar
 
 logger = logging.getLogger(__name__)
 

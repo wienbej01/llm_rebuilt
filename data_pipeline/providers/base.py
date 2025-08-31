@@ -11,7 +11,7 @@ from datetime import UTC, date, datetime, timedelta
 from enum import Enum
 from typing import Any
 
-from engine.types import Bar
+from engine.trading_types import Bar
 
 
 class DataProviderType(str, Enum):

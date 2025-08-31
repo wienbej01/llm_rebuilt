@@ -16,7 +16,7 @@ from typing import Any
 
 import numpy as np
 
-from engine.types import (
+from engine.trading_types import (
     Bar,
     ExecutionReport,
     OrderIntent,

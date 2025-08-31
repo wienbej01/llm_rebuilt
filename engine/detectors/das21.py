@@ -10,7 +10,7 @@ from typing import Any
 
 from engine.detectors.registry import register_detector
 from engine.state import MarketState
-from engine.types import FVG, MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
+from engine.trading_types import FVG, MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 

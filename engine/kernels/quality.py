@@ -13,7 +13,7 @@ import numpy as np
 from numba import float64, int64, jit
 
 from engine.state import MarketState
-from engine.types import FVG, SetupProposal
+from engine.trading_types import FVG, SetupProposal
 
 logger = logging.getLogger(__name__)
 

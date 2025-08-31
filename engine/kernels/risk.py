@@ -12,7 +12,7 @@ from typing import Any
 from numba import float64, jit
 
 from engine.state import MarketState
-from engine.types import ExecutionReport, OrderIntent, SetupProposal
+from engine.trading_types import ExecutionReport, OrderIntent, SetupProposal
 
 logger = logging.getLogger(__name__)
 

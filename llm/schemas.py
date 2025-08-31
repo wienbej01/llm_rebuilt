@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from engine.types import SetupProposal, Side
+from engine.trading_types import SetupProposal, Side
 
 
 class LLMTask(str, Enum):

@@ -12,7 +12,7 @@ import numpy as np
 
 from engine.detectors.registry import register_detector
 from engine.state import MarketState
-from engine.types import MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
+from engine.trading_types import MSS, Bar, SetupProposal, SetupType, Side, SwingPoint
 
 logger = logging.getLogger(__name__)
 

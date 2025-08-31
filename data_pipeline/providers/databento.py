@@ -9,7 +9,7 @@ import logging
 from datetime import UTC, date, datetime
 from typing import Any
 
-from engine.types import Bar
+from engine.trading_types import Bar
 
 from .base import (
     AuthenticationError,

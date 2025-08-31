@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 
 from engine.state import MarketState
-from engine.types import Bar, SetupProposal
+from engine.trading_types import Bar, SetupProposal
 
 logger = logging.getLogger(__name__)
 

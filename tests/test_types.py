@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from engine.types import (
+from engine.trading_types import (
     FVG,
     MSS,
     Bar,
