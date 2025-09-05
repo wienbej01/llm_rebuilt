@@ -550,5 +550,5 @@ def calculate_momentum_numba(prices: np.ndarray) -> float64:
     if len(prices) < 2:
         return 0.0
 
-    returns = np.diff(prices) / prices[:-1]
+    returns = (prices[1:] - prices[:-1]) / prices[:-1]
     return np.mean(returns)

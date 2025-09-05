@@ -144,26 +144,18 @@ class IBKRHistoricalProvider(HistoricalDataProvider):
         from ib_insync import Contract
 
         # Map symbols to IBKR contracts
-        contract_map = {
-            "ES": lambda: Contract(symbol="ES", secType="FUT", exchange="CME", currency="USD",
-                                 lastTradeDateOrContractMonth="202412"),  # Dec 2024
-            "NQ": lambda: Contract(symbol="NQ", secType="FUT", exchange="CME", currency="USD",
-                                 lastTradeDateOrContractMonth="202412"),
-            "RTY": lambda: Contract(symbol="RTY", secType="FUT", exchange="CME", currency="USD",
-                                  lastTradeDateOrContractMonth="202412"),
-            "GC": lambda: Contract(symbol="GC", secType="FUT", exchange="COMEX", currency="USD",
-                                 lastTradeDateOrContractMonth="202412"),
-            "SI": lambda: Contract(symbol="SI", secType="FUT", exchange="COMEX", currency="USD",
-                                 lastTradeDateOrContractMonth="202412"),
-            "CL": lambda: Contract(symbol="CL", secType="FUT", exchange="NYMEX", currency="USD",
-                                 lastTradeDateOrContractMonth="202412"),
+        # Use continuous futures for simplicity
+        exchange_map = {
+            "ES": "CME",
+            "NQ": "CME",
+            "RTY": "CME",
+            "GC": "COMEX",
+            "SI": "COMEX",
+            "CL": "NYMEX",
         }
+        exchange = exchange_map.get(symbol, "SMART")
 
-        if symbol in contract_map:
-            return contract_map[symbol]()
-        else:
-            # Generic contract creation
-            return Contract(symbol=symbol, secType="FUT", exchange="SMART", currency="USD")
+        return Contract(symbol=symbol, secType="CONTFUT", exchange=exchange, currency="USD")
 
     def _convert_timeframe(self, timeframe: str, start_date: date, end_date: date) -> tuple[str, str]:
         """Convert internal timeframe format to IBKR format."""

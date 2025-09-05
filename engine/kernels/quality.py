@@ -238,7 +238,7 @@ class QualityKernel:
             return 0.0
 
         recent_bars = market_state.get_latest_5m_bars(20)
-        closes = [bar.close for bar in recent_bars]
+        closes = [float(bar.close) for bar in recent_bars]
 
         # Linear regression slope
         x = np.arange(len(closes))
@@ -258,7 +258,7 @@ class QualityKernel:
             return 5.0  # Neutral score
 
         recent_bars = market_state.get_latest_5m_bars(20)
-        closes = [bar.close for bar in recent_bars]
+        closes = [float(bar.close) for bar in recent_bars]
 
         # Calculate returns
         returns = np.diff(closes) / closes[:-1]
