@@ -310,7 +310,7 @@ class TCCMCSKernel:
         if len(prices) < 2:
             return 0.0
 
-        returns = np.diff(prices) / prices[:-1]
+    returns = (prices[1:] - prices[:-1]) / prices[:-1]
         return np.std(returns) * np.sqrt(252)  # Annualized
 
     def get_trend_strength(self, market_state: MarketState) -> float:
@@ -387,5 +387,5 @@ def calculate_volatility_numba(prices: np.ndarray) -> float64:
     if len(prices) < 2:
         return 0.0
 
-    returns = np.diff(prices) / prices[:-1]
+    returns = (prices[1:] - prices[:-1]) / prices[:-1]
     return np.std(returns) * np.sqrt(252.0)
