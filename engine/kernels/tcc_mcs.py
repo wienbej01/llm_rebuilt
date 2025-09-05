@@ -57,7 +57,7 @@ class TCCMCSKernel:
         self.trend_lookback = trend_lookback
         self.volatility_window = volatility_window
 
-    def update_tcc_mcs(self, market_state: MarketState) -> None:
+    def update_tcc_mcs(self, market_state: MarketState, new_bars: list[Bar]) -> None:
         """
         Update TCC and MCS analysis for the market state.
 
