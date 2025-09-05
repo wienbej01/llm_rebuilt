@@ -39,13 +39,6 @@ class StructureKernel:
             market_state: Current market state
             new_bars: New bars to process
         """
-        if not new_bars:
-            return
-
-        # Add new bars to state
-        for bar in new_bars:
-            market_state.add_5m_bar(bar)
-
         # Detect swings
         self._detect_swings(market_state)
 

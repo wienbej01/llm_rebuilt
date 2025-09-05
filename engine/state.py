@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from .types import FVG, MCS, MSS, TCC, Bar, SwingPoint
+from .trading_types import FVG, MCS, MSS, TCC, Bar, SwingPoint
 
 
 @dataclass

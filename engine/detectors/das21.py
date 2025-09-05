@@ -103,7 +103,7 @@ def detect_das21_setups(
 
             # Create setup proposal
             setup = SetupProposal(
-                symbol="ES",  # This should be configurable
+                symbol=market_state.symbol,
                 setup_type=SetupType.FVG,
                 side=direction,
                 entry_price=entry_price,

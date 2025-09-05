@@ -142,7 +142,7 @@ class StrategyEngine:
 
             # Run structure kernel
             structure_update = self.structure_kernel.update_structure(
-                self.market_state, bar_5m, bars_1m_window
+                self.market_state, [bar_5m]
             )
 
             # Run quality kernel
@@ -152,7 +152,7 @@ class StrategyEngine:
 
             # Run TCC/MCS kernel
             tcc_mcs_update = self.tcc_mcs_kernel.update_tcc_mcs(
-                self.market_state, bar_5m
+                self.market_state, [bar_5m]
             )
 
             # Run micro 1m kernel

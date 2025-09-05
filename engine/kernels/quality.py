@@ -48,6 +48,14 @@ class QualityKernel:
         self.max_fvg_staleness = max_fvg_staleness
         self.volume_threshold = volume_threshold
 
+    def update_quality(self, market_state: MarketState, structure_update: Any) -> dict[str, Any]:
+        """Update quality metrics based on new structure."""
+        # This is a placeholder implementation
+        return {
+            "mqs": self.calculate_market_quality_score(market_state),
+            "frs": 0.0, # FRS is setup-specific
+        }
+
     def assess_setup_quality(self, setup: SetupProposal, market_state: MarketState) -> dict[str, Any]:
         """
         Assess overall quality of a setup proposal.
@@ -238,7 +246,7 @@ class QualityKernel:
             return 0.0
 
         recent_bars = market_state.get_latest_5m_bars(20)
-        closes = [bar.close for bar in recent_bars]
+        closes = [float(bar.close) for bar in recent_bars]
 
         # Linear regression slope
         x = np.arange(len(closes))
@@ -258,7 +266,7 @@ class QualityKernel:
             return 5.0  # Neutral score
 
         recent_bars = market_state.get_latest_5m_bars(20)
-        closes = [bar.close for bar in recent_bars]
+        closes = [float(bar.close) for bar in recent_bars]
 
         # Calculate returns
         returns = np.diff(closes) / closes[:-1]
